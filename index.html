@@ -846,7 +846,7 @@ function handleFile(file){
       const meta = `${file.name} · atualizado em ${new Date().toLocaleString('pt-BR')} · ${mapped.length} registros`;
       await loadDatasetRecords(mapped, meta);
       try{
-        await Store.set('dataset', JSON.stringify({records:mapped, meta, ts:Date.now()}));
+        await Store.set('dataset', JSON.stringify({records:mapped, meta, ts:Date.now()}), true);
       }catch(err){ console.warn('storage set failed', err); }
       toast(`Base atualizada: ${mapped.length} ações carregadas.`);
     }catch(err){
@@ -1556,7 +1556,7 @@ async function init(){
   wireStaticUI();
   let loaded = false;
   try{
-    const res = await Store.get('dataset');
+    const res = await Store.get('dataset', true);
     if(res && res.value){
       const parsed = JSON.parse(res.value);
       if(parsed.records && parsed.records.length){
