@@ -9,25 +9,11 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
-<Firebase_config=// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: "AIzaSyDSY6xr3iOOYbj57bmNe3UsgN6nTA93cnI",
-  authDomain: "painel-de-rdqa-gmu.firebaseapp.com",
-  projectId: "painel-de-rdqa-gmu",
-  storageBucket: "painel-de-rdqa-gmu.firebasestorage.app",
-  messagingSenderId: "671971865152",
-  appId: "1:671971865152:web:7a2142081d50f25a90a5a5",
-  measurementId: "G-TRHSRX4EZ4"
-};
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+<!-- Firebase (usado como banco compartilhado para evidências, quando este arquivo é
+     hospedado fora do ambiente de artifacts do Claude — ex: SharePoint, servidor interno).
+     Ver instruções de configuração em FIREBASE_CONFIG logo abaixo, no bloco de script principal. -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
 :root{
   --purple-deep:#3B1959;
