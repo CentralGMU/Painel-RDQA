@@ -9,6 +9,11 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+<!-- Firebase (usado como banco compartilhado para evidências, quando este arquivo é
+     hospedado fora do ambiente de artifacts do Claude — ex: SharePoint, servidor interno).
+     Ver instruções de configuração em FIREBASE_CONFIG logo abaixo, no bloco de script principal. -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
 :root{
   --purple-deep:#3B1959;
@@ -93,6 +98,10 @@ input,select,textarea{font-family:inherit;}
   padding:7px 12px;border-radius:999px;
 }
 .pill-status .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);flex:none;}
+.pill-status .dot.warn{background:var(--major);}
+.pill-status .dot.off{background:var(--crit);}
+.pill-status.clickable{cursor:pointer;}
+.pill-status.clickable:hover{border-color:var(--purple-light);}
 
 .btn{
   display:inline-flex;align-items:center;gap:7px;
@@ -411,6 +420,9 @@ input.field-input:focus{border-color:var(--purple-light);}
       </div>
     </div>
     <div class="topbar-actions">
+      <div class="pill-status" id="pillSync" title="Indica se as evidências estão sendo compartilhadas entre todos que acessam este painel">
+        <span class="dot" id="pillSyncDot"></span><span id="pillSyncText">Verificando sincronização…</span>
+      </div>
       <div class="pill-status"><span class="dot"></span><span id="pillDate"></span></div>
       <label class="btn btn-ghost btn-sm">
         ⟳ Atualizar base
@@ -627,16 +639,104 @@ const EMBEDDED_DATA = [{"title":"SSO.RDQ.100221","agingList":"Em andamento","apr
 /* ===================== GMU · Painel RDQA ===================== */
 
 /* ---------- Storage adapter -----------
-   Usa window.storage quando disponível (ambiente de artifacts do Claude).
-   Quando o arquivo é aberto direto no navegador (fora desse ambiente),
-   window.storage não existe — nesse caso caímos para localStorage,
-   evitando o erro ao salvar evidências. */
+   Este painel precisa que TODAS as pessoas que abrirem o arquivo enxerguem
+   as mesmas evidências (fotos, observações, nome de quem tratou). Isso só é
+   possível com um banco de dados compartilhado de verdade — um arquivo HTML
+   sozinho, aberto em navegadores diferentes, nunca consegue "conversar" entre
+   si sem um servidor por trás.
+
+   Este adapter tenta, nesta ordem:
+   1) Firebase Firestore — banco compartilhado real. Funciona quando o arquivo
+      é hospedado em qualquer lugar (SharePoint, servidor interno, etc.), desde
+      que FIREBASE_CONFIG abaixo esteja preenchido. QUALQUER pessoa que abrir
+      o arquivo vê as evidências de todos os colegas.
+   2) window.storage — disponível apenas quando este arquivo roda dentro do
+      ambiente de artifacts do Claude (claude.ai). Também é compartilhado.
+   3) localStorage — último recurso, apenas para o navegador da pessoa que
+      está com o arquivo aberto. NÃO é compartilhado entre pessoas/computadores.
+      Serve só para o painel não quebrar; evidências salvas aqui ficam
+      isoladas naquele navegador.
+
+   ===================== COMO ATIVAR O COMPARTILHAMENTO REAL =====================
+   1. Acesse https://console.firebase.google.com e crie um projeto gratuito
+      (leva ~2 minutos, não precisa cartão de crédito).
+   2. No projeto, vá em "Build" → "Firestore Database" → "Criar banco de dados".
+      Escolha o modo de produção e a região mais próxima (ex: southamerica-east1).
+   3. Em "Regras" do Firestore, cole (ajuste depois se quiser mais restrição):
+        rules_version = '2';
+        service cloud.firestore {
+          match /databases/{database}/documents {
+            match /gmu_rdqa/{doc} {
+              allow read, write: if true;
+            }
+          }
+        }
+   4. No projeto, clique no ícone "</>" (Web) para registrar um app da Web,
+      dê um nome (ex: "Painel RDQA") e copie o objeto "firebaseConfig" que
+      aparece na tela.
+   5. Cole os valores copiados no objeto FIREBASE_CONFIG logo abaixo,
+      substituindo os campos vazios.
+   6. Salve este arquivo e publique-o. O indicador no topo do painel
+      ("● Sincronização") vai mostrar "Evidências compartilhadas (Firebase)"
+      quando estiver funcionando.
+   ================================================================================ */
+const FIREBASE_CONFIG = {
+  apiKey: "",
+  authDomain: "",
+  projectId: "",
+  storageBucket: "",
+  messagingSenderId: "",
+  appId: ""
+};
+
+let _fbDb = null;
+let _fbReady = false;
+function initFirebase(){
+  try{
+    if(!FIREBASE_CONFIG.apiKey || !FIREBASE_CONFIG.projectId) return false;
+    if(typeof firebase === 'undefined') return false;
+    if(!firebase.apps || !firebase.apps.length){ firebase.initializeApp(FIREBASE_CONFIG); }
+    _fbDb = firebase.firestore();
+    _fbReady = true;
+    return true;
+  }catch(e){ console.error('Firebase init falhou', e); return false; }
+}
+const FB_COLLECTION = 'gmu_rdqa';
+/* Firestore não aceita certos caracteres (/, etc.) em IDs de documento como parte
+   "livre" sem escaping — por segurança, convertemos a key para um id seguro. */
+function fbDocId(key){ return encodeURIComponent(key).replace(/\./g,'%2E'); }
+
 const Store = {
+  mode: 'checking', // 'firebase' | 'native' | 'local'
   hasNative(){ return typeof window.storage !== 'undefined' && window.storage; },
+  hasFirebase(){ return _fbReady && _fbDb; },
+  async detectMode(){
+    if(initFirebase()){
+      try{
+        // Ping simples: tenta ler um doc que provavelmente não existe, só para validar conexão/regras.
+        await _fbDb.collection(FB_COLLECTION).doc('__ping__').get();
+        this.mode = 'firebase';
+        return this.mode;
+      }catch(e){
+        console.warn('Firebase configurado mas inacessível (verifique as regras do Firestore):', e);
+      }
+    }
+    if(this.hasNative()){ this.mode = 'native'; return this.mode; }
+    this.mode = 'local';
+    return this.mode;
+  },
   async get(key, shared){
+    if(this.hasFirebase()){
+      try{
+        const doc = await _fbDb.collection(FB_COLLECTION).doc(fbDocId(key)).get();
+        if(!doc.exists) return null;
+        const data = doc.data();
+        return {key, value: data.value, shared: !!shared};
+      }catch(e){ console.error(e); /* fall through */ }
+    }
     if(this.hasNative()){
       try{ return await window.storage.get(key, !!shared); }
-      catch(e){ return null; }
+      catch(e){ /* fall through */ }
     }
     try{
       const v = localStorage.getItem('gmu_rdqa::'+key);
@@ -644,6 +744,12 @@ const Store = {
     }catch(e){ return null; }
   },
   async set(key, value, shared){
+    if(this.hasFirebase()){
+      try{
+        await _fbDb.collection(FB_COLLECTION).doc(fbDocId(key)).set({ value, key, ts: Date.now() });
+        return {key, value, shared: !!shared};
+      }catch(e){ console.error(e); /* fall through */ }
+    }
     if(this.hasNative()){
       try{ return await window.storage.set(key, value, !!shared); }
       catch(e){ /* fall through to local */ }
@@ -652,6 +758,12 @@ const Store = {
     return {key, value, shared:false};
   },
   async delete(key, shared){
+    if(this.hasFirebase()){
+      try{
+        await _fbDb.collection(FB_COLLECTION).doc(fbDocId(key)).delete();
+        return {key, deleted:true, shared: !!shared};
+      }catch(e){ console.error(e); /* fall through */ }
+    }
     if(this.hasNative()){
       try{ return await window.storage.delete(key, !!shared); }
       catch(e){ /* fall through */ }
@@ -660,6 +772,17 @@ const Store = {
     return {key, deleted:true, shared:false};
   },
   async list(prefix, shared){
+    if(this.hasFirebase()){
+      try{
+        const snap = await _fbDb.collection(FB_COLLECTION).get();
+        const keys = [];
+        snap.forEach(doc=>{
+          const k = doc.data().key;
+          if(k && (!prefix || k.indexOf(prefix)===0)) keys.push(k);
+        });
+        return {keys, prefix, shared: !!shared};
+      }catch(e){ console.error(e); /* fall through */ }
+    }
     if(this.hasNative()){
       try{ return await window.storage.list(prefix, !!shared); }
       catch(e){ /* fall through */ }
@@ -673,6 +796,26 @@ const Store = {
     return {keys, prefix, shared:false};
   }
 };
+
+function renderSyncPill(){
+  const dot = document.getElementById('pillSyncDot');
+  const text = document.getElementById('pillSyncText');
+  const wrap = document.getElementById('pillSync');
+  if(!dot || !text) return;
+  dot.className = 'dot';
+  wrap.classList.remove('clickable');
+  wrap.onclick = null;
+  if(Store.mode === 'firebase'){
+    text.textContent = 'Evidências compartilhadas (todos veem)';
+  }else if(Store.mode === 'native'){
+    text.textContent = 'Evidências compartilhadas (Claude)';
+  }else{
+    dot.classList.add('off');
+    text.textContent = 'Somente neste navegador — configure o compartilhamento';
+    wrap.classList.add('clickable');
+    wrap.onclick = ()=> toast('Este arquivo ainda não está com o compartilhamento configurado. Veja as instruções no comentário FIREBASE_CONFIG no início do bloco de script principal.');
+  }
+}
 
 /* Desativa o plugin de rótulos de dados por padrão (só é ligado explicitamente
    no gráfico de Top Locais, para não poluir os demais gráficos). */
@@ -1216,6 +1359,7 @@ async function openDetail(key){
       </div>
       <div class="save-row">
         <span class="save-msg" id="eviSaveMsg">Salvo ✓</span>
+        <button class="btn btn-danger btn-sm" id="eviClearBtn" title="Remove fotos, observações e nome do colaborador desta ação">🗑 Excluir tudo</button>
         <button class="btn btn-primary btn-sm" id="eviSaveBtn">Salvar evidências</button>
       </div>
     </div>
@@ -1298,6 +1442,7 @@ function wireEvidenceUI(key){
   drop.addEventListener('drop', e=>{ handleEvidenceFiles(key, e.dataTransfer.files); });
   input.addEventListener('change', e=>{ handleEvidenceFiles(key, e.target.files); });
   document.getElementById('eviSaveBtn').addEventListener('click', ()=>saveEvidence(key));
+  document.getElementById('eviClearBtn').addEventListener('click', ()=>clearEvidence(key));
 }
 
 function handleEvidenceFiles(key, files){
@@ -1367,6 +1512,32 @@ async function saveEvidence(key){
     } else {
       toast('Não foi possível salvar as evidências. Tente novamente com menos fotos.');
     }
+  }
+}
+
+/* Remove por completo as evidências desta ação: fotos, observações e nomes dos
+   colaboradores que trataram. Pede confirmação porque não pode ser desfeito. */
+async function clearEvidence(key){
+  const has = evidenceCache[key] && (
+    (evidenceCache[key].photos && evidenceCache[key].photos.length) ||
+    (evidenceCache[key].notes && evidenceCache[key].notes.trim()) ||
+    (evidenceCache[key].colaboradores && evidenceCache[key].colaboradores.length)
+  );
+  if(!has){ toast('Não há evidências para excluir nesta ação.'); return; }
+  if(!confirm('Excluir todas as evidências desta ação (fotos, observações e nomes)? Esta ação não pode ser desfeita.')) return;
+  evidenceCache[key] = {notes:'', photos:[], colaboradores:[]};
+  try{
+    await Store.delete('evidence:'+key, true);
+    renderEvidenceGrid(key);
+    document.getElementById('eviNotes').value = '';
+    document.getElementById('eviColaborador').value = '';
+    renderContributors(key);
+    renderTable();
+    renderGallery();
+    toast('Evidências excluídas.');
+  }catch(e){
+    console.error(e);
+    toast('Não foi possível excluir. Tente novamente.');
   }
 }
 
@@ -1554,6 +1725,8 @@ function wireStaticUI(){
 
 async function init(){
   wireStaticUI();
+  await Store.detectMode();
+  renderSyncPill();
   let loaded = false;
   try{
     const res = await Store.get('dataset', true);
