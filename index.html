@@ -731,8 +731,17 @@ const Store = {
         const doc = await _fbDb.collection(FB_COLLECTION).doc(fbDocId(key)).get();
         if(!doc.exists) return null;
         const data = doc.data();
+        if(data.chunked){
+          const parts = await Promise.all(
+            Array.from({length: data.chunks}, (_,i)=>
+              _fbDb.collection(FB_COLLECTION).doc(fbDocId(key)+'__c'+i).get()
+            )
+          );
+          const value = parts.map(p=> p.exists ? (p.data().value||'') : '').join('');
+          return {key, value, shared: !!shared};
+        }
         return {key, value: data.value, shared: !!shared};
-      }catch(e){ console.error(e); /* fall through */ }
+      }catch(e){ console.error(e); throw e; }
     }
     if(this.hasNative()){
       try{ return await window.storage.get(key, !!shared); }
@@ -743,12 +752,40 @@ const Store = {
       return v!=null ? {key, value:v, shared:false} : null;
     }catch(e){ return null; }
   },
+  /* Firestore recusa documentos acima de ~1MB. Bases grandes (muitas ações) e
+     evidências com várias fotos podem passar disso, então dividimos o valor
+     em pedaços de até 850KB e gravamos um documento "manifesto" apontando
+     para os pedaços. Isso é transparente pro resto do código: quem chama
+     Store.set/get continua recebendo a string inteira normalmente. */
   async set(key, value, shared){
     if(this.hasFirebase()){
+      const CHUNK = 850000;
       try{
-        await _fbDb.collection(FB_COLLECTION).doc(fbDocId(key)).set({ value, key, ts: Date.now() });
+        if(value.length > CHUNK){
+          const chunks = [];
+          for(let i=0;i<value.length;i+=CHUNK) chunks.push(value.slice(i, i+CHUNK));
+          // limpa pedaços antigos, caso a nova versão tenha menos pedaços que a anterior
+          let oldChunks = 0;
+          try{
+            const prev = await _fbDb.collection(FB_COLLECTION).doc(fbDocId(key)).get();
+            if(prev.exists && prev.data().chunked) oldChunks = prev.data().chunks||0;
+          }catch(e){}
+          const batch = _fbDb.batch();
+          chunks.forEach((c,i)=>{
+            batch.set(_fbDb.collection(FB_COLLECTION).doc(fbDocId(key)+'__c'+i), {value:c});
+          });
+          for(let i=chunks.length;i<oldChunks;i++){
+            batch.delete(_fbDb.collection(FB_COLLECTION).doc(fbDocId(key)+'__c'+i));
+          }
+          batch.set(_fbDb.collection(FB_COLLECTION).doc(fbDocId(key)), {
+            key, chunked:true, chunks: chunks.length, ts: Date.now()
+          });
+          await batch.commit();
+        } else {
+          await _fbDb.collection(FB_COLLECTION).doc(fbDocId(key)).set({ value, key, chunked:false, ts: Date.now() });
+        }
         return {key, value, shared: !!shared};
-      }catch(e){ console.error(e); /* fall through */ }
+      }catch(e){ console.error(e); throw e; }
     }
     if(this.hasNative()){
       try{ return await window.storage.set(key, value, !!shared); }
@@ -760,9 +797,16 @@ const Store = {
   async delete(key, shared){
     if(this.hasFirebase()){
       try{
-        await _fbDb.collection(FB_COLLECTION).doc(fbDocId(key)).delete();
+        const doc = await _fbDb.collection(FB_COLLECTION).doc(fbDocId(key)).get();
+        const batch = _fbDb.batch();
+        if(doc.exists && doc.data().chunked){
+          const n = doc.data().chunks||0;
+          for(let i=0;i<n;i++) batch.delete(_fbDb.collection(FB_COLLECTION).doc(fbDocId(key)+'__c'+i));
+        }
+        batch.delete(_fbDb.collection(FB_COLLECTION).doc(fbDocId(key)));
+        await batch.commit();
         return {key, deleted:true, shared: !!shared};
-      }catch(e){ console.error(e); /* fall through */ }
+      }catch(e){ console.error(e); throw e; }
     }
     if(this.hasNative()){
       try{ return await window.storage.delete(key, !!shared); }
@@ -777,11 +821,11 @@ const Store = {
         const snap = await _fbDb.collection(FB_COLLECTION).get();
         const keys = [];
         snap.forEach(doc=>{
-          const k = doc.data().key;
+          const k = doc.data().key; // chunk docs não têm "key", então ficam de fora
           if(k && (!prefix || k.indexOf(prefix)===0)) keys.push(k);
         });
         return {keys, prefix, shared: !!shared};
-      }catch(e){ console.error(e); /* fall through */ }
+      }catch(e){ console.error(e); throw e; }
     }
     if(this.hasNative()){
       try{ return await window.storage.list(prefix, !!shared); }
@@ -990,8 +1034,11 @@ function handleFile(file){
       await loadDatasetRecords(mapped, meta);
       try{
         await Store.set('dataset', JSON.stringify({records:mapped, meta, ts:Date.now()}), true);
-      }catch(err){ console.warn('storage set failed', err); }
-      toast(`Base atualizada: ${mapped.length} ações carregadas.`);
+        toast(`Base atualizada: ${mapped.length} ações carregadas.`);
+      }catch(err){
+        console.error('Falha ao salvar a base compartilhada', err);
+        toast('A base foi carregada na tela, mas NÃO foi salva de forma compartilhada. Ao recarregar a página, ela pode voltar à versão anterior. Verifique a conexão/regras do Firebase.');
+      }
     }catch(err){
       console.error(err);
       toast('Erro ao ler a planilha. Confirme que é um .xlsx válido.');
@@ -1737,7 +1784,10 @@ async function init(){
         loaded = true;
       }
     }
-  }catch(e){ /* no stored dataset yet */ }
+  }catch(e){
+    console.error('Falha ao carregar a base compartilhada', e);
+    toast('Não foi possível carregar a base compartilhada agora (problema de conexão). Mostrando a última versão disponível neste navegador.');
+  }
   if(!loaded && typeof EMBEDDED_DATA!=='undefined' && EMBEDDED_DATA.length){
     const meta = `Base inicial carregada (data__2_.xlsx) · ${EMBEDDED_DATA.length} registros`;
     await loadDatasetRecords(EMBEDDED_DATA, meta);
