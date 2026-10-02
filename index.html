@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
 <!-- Firebase (usado como banco compartilhado para evidências, quando este arquivo é
      hospedado fora do ambiente de artifacts do Claude — ex: SharePoint, servidor interno).
@@ -365,6 +366,15 @@ input.field-input:focus{border-color:var(--purple-light);}
 .gallery-info{padding:11px 13px;}
 .gallery-info .g-title{font-size:12px;font-weight:700;color:var(--purple-deep);}
 .gallery-info .g-meta{font-size:10.5px;color:var(--ink-faint);margin-top:3px;font-family:var(--font-mono);}
+.gallery-filters input[type=date]{
+  border:1px solid var(--line);background:var(--lilac-mist);border-radius:8px;padding:7px 10px;
+  font-size:12.5px;color:var(--ink);outline:none;font-family:inherit;
+}
+.gallery-filters input[type=date]:focus{border-color:var(--purple-light);background:#fff;}
+.gallery-filters .gf-label{font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;}
+.gallery-filters .gf-spacer{flex:1;}
+.gallery-filters input[list]{min-width:240px;}
+.gallery-info .g-date{font-size:10.5px;color:var(--ink-faint);margin-top:3px;}
 .empty-state{text-align:center;padding:60px 20px;color:var(--ink-faint);}
 .empty-state .ico{width:52px;height:52px;margin:0 auto 14px;color:var(--lilac);}
 
@@ -529,7 +539,8 @@ input.field-input:focus{border-color:var(--purple-light);}
     <div class="tabs">
       <button class="tab-btn active" data-tab="tab-dados">Ações</button>
       <button class="tab-btn" data-tab="tab-evidencias">Evidências</button>
-      <button class="tab-btn" data-tab="tab-relatorio">Relatório</button>
+      <button class="tab-btn" data-tab="tab-relatorio">Relatório de evidências</button>
+      <button class="tab-btn" data-tab="tab-indicadores">📊 Relatório de indicadores</button>
     </div>
 
     <!-- Tab: Dados -->
@@ -585,21 +596,41 @@ input.field-input:focus{border-color:var(--purple-light);}
     <!-- Tab: Evidências -->
     <div class="tab-panel" id="tab-evidencias">
       <div class="section-head" style="margin-top:14px;"><h3>Galeria de evidências</h3><span class="hint" id="galleryCount"></span></div>
+      <div class="filters-bar gallery-filters">
+        <input type="text" id="gTaxon" list="gTaxonOptions" placeholder="Filtrar por taxonomia (ex: SSO.RDQ.58870)..." autocomplete="off">
+        <datalist id="gTaxonOptions"></datalist>
+        <span class="gf-label">Fotos incluídas de</span>
+        <input type="date" id="gDateFrom" title="Data inicial da inclusão das fotos">
+        <span class="gf-label">até</span>
+        <input type="date" id="gDateTo" title="Data final da inclusão das fotos">
+        <button class="btn btn-ghost btn-sm" id="gClear" type="button">Limpar filtros</button>
+      </div>
       <div class="gallery-grid" id="galleryGrid"></div>
     </div>
 
     <!-- Tab: Relatório -->
     <div class="tab-panel" id="tab-relatorio">
-      <div class="section-head" style="margin-top:14px;"><h3>Gerar relatório</h3><span class="hint">Exporte tudo que já foi tratado, com as evidências anexadas — pronto para impressão/PDF</span></div>
+      <div class="section-head" style="margin-top:14px;"><h3>Relatório de evidências</h3><span class="hint">PDF só com o número da RDQA, o local e as fotos de evidência</span></div>
       <div class="report-toolbar">
         <div class="report-scope">
-          <button class="active" data-scope="evidence">Ações tratadas (com evidência)</button>
-          <button data-scope="overdue">Vencidas</button>
-          <button data-scope="filtered">Filtro atual (aba Ações)</button>
+          <button class="active" data-scope="evidence">Todas com evidência</button>
+          <button data-scope="gallery">Filtro da galeria (taxonomia / data)</button>
         </div>
-        <button class="btn btn-primary" id="generateReportBtn">⬇ Gerar relatório (PDF)</button>
+        <button class="btn btn-primary" id="generateReportBtn">⬇ Gerar PDF de evidências</button>
       </div>
       <div class="report-preview-list" id="reportPreview"></div>
+    </div>
+
+    <!-- Tab: Relatório de indicadores (PDF) -->
+    <div class="tab-panel" id="tab-indicadores">
+      <div class="section-head" style="margin-top:14px;"><h3>Relatório de indicadores</h3><span class="hint">PDF com os principais indicadores do painel, pronto para envio</span></div>
+      <div class="filters-bar" style="flex-direction:column;align-items:flex-start;gap:12px;">
+        <div style="font-size:13px;color:var(--ink-soft);line-height:1.6;">
+          O PDF reúne a posição atual da base: aderência, total de ações, vencidas, vencem em 7 dias, risco crítico em aberto,
+          aging das vencidas e os gráficos de status, nível de risco, registros por mês/ano e top 10 locais.
+        </div>
+        <button class="btn btn-primary" id="gPdfBtn" type="button">⬇ Gerar PDF de indicadores</button>
+      </div>
     </div>
 
     <div class="footer-note">GMU · Gerência de Manutenção Civil e Utilidades Industriais — Painel RDQA. Dados processados localmente no navegador.</div>
@@ -1613,9 +1644,58 @@ async function loadAllEvidenceIndex(){
 
 async function renderGallery(){
   await loadAllEvidenceIndex();
+  paintGallery();
+}
+
+/* Lê os filtros da galeria: taxonomia (texto livre, sem acento) e período de inclusão das fotos */
+function getGalleryFilters(){
+  const taxon = stripAccents((document.getElementById('gTaxon').value||'').trim());
+  const fromV = document.getElementById('gDateFrom').value;
+  const toV = document.getElementById('gDateTo').value;
+  const from = fromV ? new Date(fromV+'T00:00:00').getTime() : null;
+  const to = toV ? new Date(toV+'T23:59:59.999').getTime() : null;
+  return {taxon, from, to, fromV, toV};
+}
+/* Retorna [[key, evidência-filtrada]] — as fotos já vêm filtradas pelo período */
+function getGalleryEntries(){
+  const f = getGalleryFilters();
+  const out = [];
+  Object.entries(evidenceCache).forEach(([key,v])=>{
+    if(!v.photos || !v.photos.length) return;
+    const rec = findByKey(key);
+    const title = rec? rec.title : key;
+    if(f.taxon && !stripAccents(title).includes(f.taxon)) return;
+    let photos = v.photos;
+    if(f.from!=null || f.to!=null){
+      photos = photos.filter(p=>{
+        if(!p.ts) return false;
+        if(f.from!=null && p.ts < f.from) return false;
+        if(f.to!=null && p.ts > f.to) return false;
+        return true;
+      });
+    }
+    if(!photos.length) return;
+    out.push([key, Object.assign({}, v, {photos})]);
+  });
+  return out;
+}
+function fmtTs(ts){ return ts? new Date(ts).toLocaleDateString('pt-BR') : null; }
+function photoDateRange(photos){
+  const ts = photos.map(p=>p.ts).filter(Boolean);
+  if(!ts.length) return 'data não registrada';
+  const a = fmtTs(Math.min(...ts)), b = fmtTs(Math.max(...ts));
+  return a===b ? 'incluída em '+a : 'incluídas de '+a+' a '+b;
+}
+
+function paintGallery(){
   const grid = document.getElementById('galleryGrid');
-  const entries = Object.entries(evidenceCache).filter(([k,v])=>v.photos && v.photos.length);
-  if(entries.length===0){
+  const totalWithEvi = Object.values(evidenceCache).filter(v=>v.photos && v.photos.length).length;
+  // sugestões de taxonomia (só as que têm evidência)
+  document.getElementById('gTaxonOptions').innerHTML = Object.keys(evidenceCache)
+    .filter(k=>evidenceCache[k].photos && evidenceCache[k].photos.length)
+    .map(k=>{ const r=findByKey(k); return `<option value="${escapeHtml(r? r.title : k)}">`; }).join('');
+
+  if(totalWithEvi===0){
     grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">
       <div class="ico">📷</div>
       <div>Nenhuma evidência anexada ainda. Abra uma ação na tabela e adicione fotos.</div>
@@ -1623,7 +1703,21 @@ async function renderGallery(){
     document.getElementById('galleryCount').textContent = '0 ações com evidências';
     return;
   }
-  document.getElementById('galleryCount').textContent = `${entries.length} ação(ões) com evidências · ${entries.reduce((s,[,v])=>s+v.photos.length,0)} fotos · ${new Set(entries.flatMap(([,v])=>v.colaboradores||[])).size} colaborador(es) envolvidos`;
+  const entries = getGalleryEntries();
+  const f = getGalleryFilters();
+  const filtered = !!(f.taxon || f.from!=null || f.to!=null);
+  const nPhotos = entries.reduce((s,[,v])=>s+v.photos.length,0);
+  const nContrib = new Set(entries.flatMap(([,v])=>v.colaboradores||[])).size;
+  document.getElementById('galleryCount').textContent =
+    `${entries.length}${filtered? ' de '+totalWithEvi : ''} ação(ões) com evidências · ${nPhotos} fotos · ${nContrib} colaborador(es) envolvidos`;
+
+  if(entries.length===0){
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">
+      <div class="ico">🔎</div>
+      <div>Nenhuma evidência encontrada para esse filtro. Ajuste a taxonomia ou o período.</div>
+    </div>`;
+    return;
+  }
   grid.innerHTML = entries.map(([key,v])=>{
     const rec = findByKey(key);
     const thumbs = v.photos.slice(0,2).map(p=>`<img src="${p.dataUrl}">`).join('');
@@ -1633,6 +1727,7 @@ async function renderGallery(){
       <div class="gallery-info">
         <div class="g-title">${escapeHtml(rec? rec.title : key)}</div>
         <div class="g-meta">${v.photos.length} foto(s) · ${rec? escapeHtml(truncate(rec.localMacro,24)) : ''}</div>
+        <div class="g-date">📅 ${photoDateRange(v.photos)}</div>
         <div class="g-contrib">👤 ${escapeHtml(contribs)}</div>
       </div>
     </div>`;
@@ -1643,75 +1738,294 @@ async function renderGallery(){
   }));
 }
 
+function clearGalleryFilters(){
+  ['gTaxon','gDateFrom','gDateTo'].forEach(id=>document.getElementById(id).value='');
+  paintGallery();
+}
+
+/* ================= PDF de indicadores ================= */
+function computeIndicators(){
+  const total = DATA.length;
+  const done = DATA.filter(d=>d._isDone).length;
+  const open = total - done;
+  const overdue = DATA.filter(d=>d._overdue).length;
+  const soon = DATA.filter(d=>!d._isDone && !d._overdue && d._daysDiff!=null && d._daysDiff<=7).length;
+  const criticalOpen = DATA.filter(d=>!d._isDone && d.nivelRisco==='Crítico').length;
+  const noDeadline = DATA.filter(d=>d._noDeadline).length;
+  const buckets = ['0-30','31-60','61-90','90+'].map(b=>({label:b+' dias', n:DATA.filter(d=>d._bucket===b).length}));
+  return {total, done, open, overdue, soon, criticalOpen, noDeadline, buckets, pct: total? done/total*100 : 100};
+}
+
+async function generateIndicatorsPDF(){
+  if(!window.jspdf || !window.jspdf.jsPDF){
+    toast('Não foi possível carregar a biblioteca de PDF. Verifique a conexão e tente novamente.');
+    return;
+  }
+  const btn = document.getElementById('gPdfBtn');
+  btn.disabled = true;
+  try{
+    const {jsPDF} = window.jspdf;
+    const doc = new jsPDF({unit:'mm', format:'a4'});
+    const W = 210, H = 297, M = 14, CW = W - 2*M;
+    const PURPLE = [91,44,131], DEEP = [59,25,89], INK = [40,24,57], SOFT = [110,94,128], PALE = [243,236,249], LINE = [231,218,241];
+    const ind = computeIndicators();
+    const now = new Date().toLocaleString('pt-BR');
+    let y = 0;
+
+    const newPage = ()=>{ doc.addPage(); y = M; };
+    const ensure = (h)=>{ if(y + h > H - 16) newPage(); };
+    const sectionTitle = (t)=>{
+      ensure(14);
+      doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(...DEEP);
+      doc.text(t, M, y);
+      doc.setDrawColor(...PURPLE); doc.setLineWidth(0.6); doc.line(M, y+1.8, M+14, y+1.8);
+      y += 8;
+    };
+
+    // ---- Cabeçalho
+    doc.setFillColor(...PURPLE); doc.rect(0, 0, W, 34, 'F');
+    try{
+      const logo = document.getElementById('logoImg').src;
+      if(logo && logo.startsWith('data:image')){
+        const fmt = /image\/png/.test(logo) ? 'PNG' : 'JPEG';
+        doc.setFillColor(255,255,255); doc.roundedRect(M, 7, 36, 20, 2, 2, 'F');
+        doc.addImage(logo, fmt, M+2, 9, 32, 16, undefined, 'FAST');
+      }
+    }catch(e){}
+    doc.setTextColor(255,255,255);
+    doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
+    doc.text('PAINEL RDQA · GMU', M+42, 13);
+    doc.setFontSize(17); doc.text('Relatório de Indicadores', M+42, 21);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
+    doc.text('Gerado em ' + now, M+42, 27.5);
+    y = 44;
+
+    // ---- KPIs (grade 3 x 2)
+    sectionTitle('Resumo geral');
+    const kpis = [
+      ['Aderência (concluídas)', ind.pct.toFixed(2).replace('.',',')+'%', `${ind.done.toLocaleString('pt-BR')} de ${ind.total.toLocaleString('pt-BR')} ações`, PURPLE],
+      ['Total de ações', ind.total.toLocaleString('pt-BR'), `${ind.open.toLocaleString('pt-BR')} em aberto`, PURPLE],
+      ['Vencidas', ind.overdue.toLocaleString('pt-BR'), 'com base na Data Limite', [192,57,43]],
+      ['Vencem em 7 dias', ind.soon.toLocaleString('pt-BR'), 'Limite nos próximos 7 dias', [199,162,51]],
+      ['Risco crítico em aberto', ind.criticalOpen.toLocaleString('pt-BR'), 'ações de nível crítico', [192,57,43]],
+      ['Em aberto sem Limite', ind.noDeadline.toLocaleString('pt-BR'), 'sem Data Limite definida', SOFT],
+    ];
+    const gap = 4, kw = (CW - 2*gap)/3, kh = 24;
+    kpis.forEach((k,i)=>{
+      const col = i%3, row = Math.floor(i/3);
+      const x = M + col*(kw+gap), yy = y + row*(kh+gap);
+      doc.setFillColor(...PALE); doc.roundedRect(x, yy, kw, kh, 2.5, 2.5, 'F');
+      doc.setFillColor(...k[3]); doc.roundedRect(x, yy, 1.8, kh, 0.9, 0.9, 'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(...SOFT);
+      doc.text(k[0].toUpperCase(), x+5, yy+6);
+      doc.setFontSize(18); doc.setTextColor(...k[3]);
+      doc.text(String(k[1]), x+5, yy+15);
+      doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(...SOFT);
+      doc.text(k[2], x+5, yy+20.5);
+    });
+    y += 2*kh + gap + 8;
+
+    // ---- Aging
+    sectionTitle('Aging das ações vencidas');
+    const bw = (CW - 3*gap)/4, bh = 18;
+    const bcolors = [[199,162,51],[217,123,61],[192,57,43],[142,36,24]];
+    ind.buckets.forEach((b,i)=>{
+      const x = M + i*(bw+gap);
+      doc.setFillColor(...PALE); doc.roundedRect(x, y, bw, bh, 2.5, 2.5, 'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.setTextColor(...bcolors[i]);
+      doc.text(String(b.n), x+4, y+9.5);
+      doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(...SOFT);
+      doc.text(b.label + ' vencida'+(b.n!==1?'s':''), x+4, y+14.5);
+    });
+    y += bh + 9;
+
+    // ---- Gráficos (reaproveita os canvases do painel)
+    const addChart = (canvasId, title, x, yy, w)=>{
+      const cv = document.getElementById(canvasId);
+      if(!cv || !cv.width || !cv.height) return 0;
+      const img = cv.toDataURL('image/png');
+      const h = Math.min(w * cv.height / cv.width, 70);
+      const iw = h * cv.width / cv.height;
+      doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...DEEP);
+      doc.text(title, x, yy);
+      doc.setDrawColor(...LINE); doc.setLineWidth(0.3); doc.roundedRect(x-1.5, yy+2, w+3, h+5, 2, 2, 'S');
+      doc.addImage(img, 'PNG', x + (w-iw)/2, yy+4.5, iw, h, undefined, 'FAST');
+      return h + 12;
+    };
+    sectionTitle('Indicadores');
+    const half = (CW - 6)/2;
+    let h1 = Math.max(addChart('chartAging','Status', M+1.5, y, half-3), 0);
+    let h2 = addChart('chartRisk','Nível de risco', M+half+6+1.5, y, half-3);
+    y += Math.max(h1,h2) + 4;
+    ensure(80);
+    h1 = addChart('chartTrend','Registros por mês', M+1.5, y, half-3);
+    h2 = addChart('chartVencidasAno','Total de ações registradas por ano', M+half+6+1.5, y, half-3);
+    y += Math.max(h1,h2) + 4;
+    ensure(95);
+    h1 = addChart('chartLocais','Top 10 locais macro', M+1.5, y, CW-3);
+    y += h1 + 4;
+
+    // ---- Rodapé / paginação
+    const n = doc.getNumberOfPages();
+    for(let p=1;p<=n;p++){
+      doc.setPage(p);
+      doc.setDrawColor(...LINE); doc.setLineWidth(0.3); doc.line(M, H-12, W-M, H-12);
+      doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(...SOFT);
+      doc.text('GMU · Gerência de Manutenção Civil e Utilidades Industriais — Painel RDQA', M, H-7.5);
+      doc.text('Página '+p+' de '+n, W-M, H-7.5, {align:'right'});
+    }
+
+    const stamp = new Date().toISOString().slice(0,10);
+    doc.save('Indicadores_RDQA_'+stamp+'.pdf');
+    toast('PDF gerado — pronto para envio.');
+  }catch(e){
+    console.error(e);
+    toast('Não foi possível gerar o PDF. Tente novamente.');
+  }finally{
+    btn.disabled = false;
+  }
+}
+
 /* ================= Report ================= */
-let reportScope = 'evidence'; // 'evidence' | 'filtered' | 'overdue'
-function setReportScope(s){
-  reportScope = s;
-  document.querySelectorAll('.report-scope button').forEach(b=>b.classList.toggle('active', b.dataset.scope===s));
+let reportScope = 'evidence'; // 'evidence' (todas) | 'gallery' (filtro da galeria)
+function setReportScope(sc){
+  reportScope = sc;
+  document.querySelectorAll('.report-scope button').forEach(b=>b.classList.toggle('active', b.dataset.scope===sc));
   renderReportPreview();
+}
+/* Itens do relatório de evidências: [{key, title, local, photos}] ordenados pelo número da RDQA */
+function getReportEntries(){
+  let pairs;
+  if(reportScope==='gallery') pairs = getGalleryEntries();
+  else pairs = Object.entries(evidenceCache).filter(([,v])=>v.photos && v.photos.length);
+  return pairs.map(([key,v])=>{
+    const rec = findByKey(key);
+    const macro = rec? (rec.localMacro||'') : '';
+    const det = rec? (rec.localDetalhado||'') : '';
+    return {key, title: rec? rec.title : key, local: [macro,det].filter(Boolean).join(' / ') || '—', photos: v.photos};
+  }).sort((a,b)=>String(a.title).localeCompare(String(b.title),'pt-BR',{numeric:true}));
 }
 async function renderReportPreview(){
   await loadAllEvidenceIndex();
-  let items;
-  if(reportScope==='evidence') items = DATA.filter(d=>evidenceCache[d._key] && evidenceCache[d._key].photos && evidenceCache[d._key].photos.length);
-  else if(reportScope==='overdue') items = DATA.filter(d=>d._overdue);
-  else items = sortData(getFiltered());
-
+  const items = getReportEntries();
   const wrap = document.getElementById('reportPreview');
   if(items.length===0){
-    wrap.innerHTML = `<div class="empty-state"><div class="ico">📄</div>Nenhum item nesse escopo.</div>`;
+    wrap.innerHTML = `<div class="empty-state"><div class="ico">📷</div>Nenhuma RDQA com evidência nesse escopo.</div>`;
     return;
   }
-  wrap.innerHTML = items.slice(0,200).map(d=>{
-    const evi = evidenceCache[d._key];
-    const imgs = evi&&evi.photos? evi.photos.map(p=>`<img src="${p.dataUrl}">`).join(''):'';
-    const contribs = evi&&evi.colaboradores&&evi.colaboradores.length? evi.colaboradores.join(', ') : null;
-    return `<div class="report-item">
-      <div class="ri-head"><span>${escapeHtml(d.title)}</span><span>${daysChip(d)}</span></div>
-      <div class="ri-meta">${escapeHtml(d.agingList)} · ${escapeHtml(d.nivelRisco)} · ${escapeHtml(d.localMacro||'—')} · registrado em ${fmtDate(d.dataRegistro)} · prazo ${fmtDate(d.limite)}${contribs? ' · tratado por: '+escapeHtml(contribs):''}</div>
-      ${imgs? `<div class="ri-imgs">${imgs}</div>` : '<div style="font-size:11px;color:var(--ink-faint);">Sem fotos anexadas</div>'}
-    </div>`;
-  }).join('') + (items.length>200? `<div class="hint" style="text-align:center;padding:10px;">Exibindo 200 de ${items.length} itens no preview (o relatório impresso trará todos).</div>`:'');
+  const nPhotos = items.reduce((s,i)=>s+i.photos.length,0);
+  wrap.innerHTML = `<div class="hint" style="padding:4px 2px 10px;">${items.length} RDQA(s) · ${nPhotos} foto(s) no relatório</div>` +
+    items.slice(0,100).map(i=>`<div class="report-item">
+      <div class="ri-head"><span>${escapeHtml(i.title)}</span></div>
+      <div class="ri-meta">${escapeHtml(i.local)}</div>
+      <div class="ri-imgs">${i.photos.map(p=>`<img src="${p.dataUrl}">`).join('')}</div>
+    </div>`).join('') +
+    (items.length>100? `<div class="hint" style="text-align:center;padding:10px;">Exibindo 100 de ${items.length} no preview (o PDF traz todas).</div>`:'');
 }
 
-function generateReport(){
-  const items = reportScope==='evidence'
-    ? DATA.filter(d=>evidenceCache[d._key] && evidenceCache[d._key].photos && evidenceCache[d._key].photos.length)
-    : reportScope==='overdue' ? DATA.filter(d=>d._overdue) : sortData(getFiltered());
-
-  const scopeLabel = {evidence:'Ações Tratadas — Evidências Fotográficas', overdue:'Ações Vencidas', filtered:'Ações — Filtro Atual'}[reportScope];
-  const now = new Date().toLocaleString('pt-BR');
-  let html = `
-    <div style="font-family:'Montserrat',sans-serif;padding:30px;">
-      <div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid #5B2C83;padding-bottom:16px;margin-bottom:20px;">
-        <img src="${document.getElementById('logoImg').src}" style="height:50px;">
-        <div>
-          <div style="font-size:10px;letter-spacing:.1em;color:#5B2C83;font-weight:700;text-transform:uppercase;">Relatório RDQA</div>
-          <div style="font-size:18px;font-weight:800;color:#281839;">${scopeLabel}</div>
-          <div style="font-size:11px;color:#6E5E80;">Gerado em ${now} · ${items.length} ação(ões)</div>
-        </div>
-      </div>`;
-  items.forEach(d=>{
-    const evi = evidenceCache[d._key];
-    const contribs = evi&&evi.colaboradores&&evi.colaboradores.length? evi.colaboradores.join(', ') : null;
-    html += `<div style="border:1px solid #E7DAF1;border-radius:10px;padding:14px 16px;margin-bottom:12px;page-break-inside:avoid;">
-      <div style="display:flex;justify-content:space-between;font-weight:700;color:#3B1959;font-size:13px;">
-        <span>${escapeHtml(d.title)}</span><span>${escapeHtml(d.agingList)}</span>
-      </div>
-      <div style="font-size:11px;color:#6E5E80;margin:4px 0 8px;">
-        Risco: ${escapeHtml(d.nivelRisco||'—')} · Local: ${escapeHtml(d.localMacro||'—')} / ${escapeHtml(d.localDetalhado||'—')}<br>
-        Registro: ${fmtDate(d.dataRegistro)} · Prazo: ${fmtDate(d.limite)} · ${d._isDone?'Concluída':(d._overdue? 'Vencida há '+Math.abs(d._daysDiff)+' dias':(d._daysDiff!=null?'Vence em '+d._daysDiff+' dias':'Sem prazo'))}
-        ${contribs? `<br>Tratado por: <b>${escapeHtml(contribs)}</b>` : ''}
-      </div>
-      <div style="font-size:11.5px;color:#281839;margin-bottom:6px;"><b>Descrição:</b> ${escapeHtml(d.descricaoEvento||'—')}</div>
-      <div style="font-size:11.5px;color:#281839;margin-bottom:8px;"><b>Ação corretiva:</b> ${escapeHtml(d.acoesPropostas||'—')}</div>
-      ${evi&&evi.notes? `<div style="font-size:11.5px;color:#281839;margin-bottom:8px;"><b>Observação de campo:</b> ${escapeHtml(evi.notes)}</div>`:''}
-      ${evi&&evi.photos&&evi.photos.length? `<div style="display:flex;flex-wrap:wrap;gap:6px;">${evi.photos.map(p=>`<div style="text-align:center;"><img src="${p.dataUrl}" style="width:110px;height:110px;object-fit:cover;border-radius:6px;border:1px solid #E7DAF1;display:block;">${p.colaborador?`<div style="font-size:8.5px;color:#6E5E80;margin-top:2px;">${escapeHtml(p.colaborador)}</div>`:''}</div>`).join('')}</div>` : ''}
-    </div>`;
+function loadImgSize(dataUrl){
+  return new Promise(res=>{
+    const im = new Image();
+    im.onload = ()=>res({w:im.naturalWidth||1, h:im.naturalHeight||1});
+    im.onerror = ()=>res({w:1,h:1});
+    im.src = dataUrl;
   });
-  html += `<div style="text-align:center;font-size:10px;color:#A395B3;margin-top:20px;">GMU · Gerência de Manutenção Civil e Utilidades Industriais — Painel RDQA</div></div>`;
-  document.getElementById('printArea').innerHTML = html;
-  window.print();
+}
+
+async function generateReport(){
+  if(!window.jspdf || !window.jspdf.jsPDF){
+    toast('Não foi possível carregar a biblioteca de PDF. Verifique a conexão e tente novamente.');
+    return;
+  }
+  const btn = document.getElementById('generateReportBtn');
+  btn.disabled = true;
+  const oldTxt = btn.textContent;
+  btn.textContent = 'Gerando PDF...';
+  try{
+    await loadAllEvidenceIndex();
+    const items = getReportEntries();
+    if(!items.length){ toast('Nenhuma RDQA com evidência nesse escopo.'); return; }
+
+    const {jsPDF} = window.jspdf;
+    const doc = new jsPDF({unit:'mm', format:'a4'});
+    const W=210, H=297, M=14, CW=W-2*M;
+    const PURPLE=[91,44,131], DEEP=[59,25,89], INK=[40,24,57], SOFT=[110,94,128], LINE=[231,218,241], PALE=[243,236,249];
+    const nPhotos = items.reduce((s,i)=>s+i.photos.length,0);
+    const now = new Date().toLocaleString('pt-BR');
+    let y = 0;
+
+    // Cabeçalho
+    doc.setFillColor(...PURPLE); doc.rect(0,0,W,34,'F');
+    try{
+      const logo = document.getElementById('logoImg').src;
+      if(logo && logo.startsWith('data:image')){
+        doc.setFillColor(255,255,255); doc.roundedRect(M,7,36,20,2,2,'F');
+        doc.addImage(logo, /image\/png/.test(logo)?'PNG':'JPEG', M+2, 9, 32, 16, undefined, 'FAST');
+      }
+    }catch(e){}
+    doc.setTextColor(255,255,255);
+    doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.text('PAINEL RDQA · GMU', M+42, 13);
+    doc.setFontSize(17); doc.text('Relatório de Evidências', M+42, 21);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
+    doc.text(`Gerado em ${now} · ${items.length} RDQA(s) · ${nPhotos} foto(s)`, M+42, 27.5);
+    y = 44;
+
+    const gap = 4, cols = 3, cw = (CW - (cols-1)*gap)/cols, ch = 52;
+    const rdqaHeader = (it, cont)=>{
+      doc.setFillColor(...PALE); doc.roundedRect(M, y, CW, 12, 2, 2, 'F');
+      doc.setFillColor(...PURPLE); doc.roundedRect(M, y, 1.8, 12, 0.9, 0.9, 'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(...DEEP);
+      doc.text(String(it.title) + (cont? '  (continuação)' : ''), M+5, y+5.2);
+      doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(...SOFT);
+      doc.text(doc.splitTextToSize('Local: ' + it.local, CW-10)[0], M+5, y+9.6);
+      y += 16;
+    };
+
+    for(const it of items){
+      if(y + 16 + ch + 6 > H-16){ doc.addPage(); y = M; }
+      rdqaHeader(it, false);
+      let col = 0;
+      for(const p of it.photos){
+        if(col===0 && y + ch + 6 > H-16){ doc.addPage(); y = M; rdqaHeader(it, true); }
+        const x = M + col*(cw+gap);
+        doc.setDrawColor(...LINE); doc.setLineWidth(0.3); doc.roundedRect(x, y, cw, ch, 1.5, 1.5, 'S');
+        try{
+          const sz = await loadImgSize(p.dataUrl);
+          const boxW = cw-3, boxH = ch-9;
+          let iw = boxW, ih = iw*sz.h/sz.w;
+          if(ih > boxH){ ih = boxH; iw = ih*sz.w/sz.h; }
+          doc.addImage(p.dataUrl, 'JPEG', x+1.5+(boxW-iw)/2, y+1.5+(boxH-ih)/2, iw, ih, undefined, 'FAST');
+        }catch(e){
+          doc.setFontSize(8); doc.setTextColor(...SOFT); doc.text('Imagem indisponível', x+4, y+ch/2);
+        }
+        doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(...SOFT);
+        const cap = (p.ts? 'Incluída em '+fmtTs(p.ts) : '') ;
+        if(cap) doc.text(cap, x+cw/2, y+ch-2.5, {align:'center'});
+        col++;
+        if(col===cols){ col=0; y += ch + gap; }
+      }
+      if(col!==0) y += ch + gap;
+      y += 4;
+    }
+
+    // Rodapé
+    const n = doc.getNumberOfPages();
+    for(let pg=1; pg<=n; pg++){
+      doc.setPage(pg);
+      doc.setDrawColor(...LINE); doc.setLineWidth(0.3); doc.line(M, H-12, W-M, H-12);
+      doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(...SOFT);
+      doc.text('GMU · Gerência de Manutenção Civil e Utilidades Industriais — Painel RDQA', M, H-7.5);
+      doc.text('Página '+pg+' de '+n, W-M, H-7.5, {align:'right'});
+    }
+    doc.save('Evidencias_RDQA_'+new Date().toISOString().slice(0,10)+'.pdf');
+    toast('PDF de evidências gerado — pronto para envio.');
+  }catch(e){
+    console.error(e);
+    toast('Não foi possível gerar o PDF. Tente novamente.');
+  }finally{
+    btn.disabled = false;
+    btn.textContent = oldTxt;
+  }
 }
 
 /* ================= Tabs ================= */
@@ -1766,6 +2080,12 @@ function wireStaticUI(){
   document.querySelectorAll('.tab-btn').forEach(b=>b.addEventListener('click', ()=>switchTab(b.dataset.tab)));
   document.querySelectorAll('.report-scope button').forEach(b=>b.addEventListener('click', ()=>setReportScope(b.dataset.scope)));
   document.getElementById('generateReportBtn').addEventListener('click', generateReport);
+  ['gTaxon','gDateFrom','gDateTo'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', paintGallery);
+    document.getElementById(id).addEventListener('change', paintGallery);
+  });
+  document.getElementById('gClear').addEventListener('click', clearGalleryFilters);
+  document.getElementById('gPdfBtn').addEventListener('click', generateIndicatorsPDF);
 
   document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeDetail(); closeLightbox(); } });
 }
