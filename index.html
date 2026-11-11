@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
 <!-- Firebase (usado como banco compartilhado para evidências, quando este arquivo é
      hospedado fora do ambiente de artifacts do Claude — ex: SharePoint, servidor interno).
@@ -365,6 +366,15 @@ input.field-input:focus{border-color:var(--purple-light);}
 .gallery-info{padding:11px 13px;}
 .gallery-info .g-title{font-size:12px;font-weight:700;color:var(--purple-deep);}
 .gallery-info .g-meta{font-size:10.5px;color:var(--ink-faint);margin-top:3px;font-family:var(--font-mono);}
+.gallery-filters input[type=date]{
+  border:1px solid var(--line);background:var(--lilac-mist);border-radius:8px;padding:7px 10px;
+  font-size:12.5px;color:var(--ink);outline:none;font-family:inherit;
+}
+.gallery-filters input[type=date]:focus{border-color:var(--purple-light);background:#fff;}
+.gallery-filters .gf-label{font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;}
+.gallery-filters .gf-spacer{flex:1;}
+.gallery-filters input[list]{min-width:240px;}
+.gallery-info .g-date{font-size:10.5px;color:var(--ink-faint);margin-top:3px;}
 .empty-state{text-align:center;padding:60px 20px;color:var(--ink-faint);}
 .empty-state .ico{width:52px;height:52px;margin:0 auto 14px;color:var(--lilac);}
 
@@ -404,6 +414,48 @@ input.field-input:focus{border-color:var(--purple-light);}
 
 .footer-note{text-align:center;font-size:11px;color:var(--ink-faint);margin-top:50px;padding-bottom:20px;}
 
+
+/* ============ Relatório executivo ============ */
+.ex-wrap{display:grid;grid-template-columns:310px 1fr;gap:18px;margin-top:14px;align-items:start;}
+@media(max-width:1000px){.ex-wrap{grid-template-columns:1fr;}}
+.ex-side{background:#fff;border:1px solid var(--line-soft);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow-sm);position:sticky;top:96px;}
+.ex-side h4{margin:0 0 4px;font-size:14px;font-weight:800;}
+.ex-side .ex-hint{font-size:11.5px;color:var(--ink-soft);line-height:1.5;margin-bottom:10px;}
+.ex-sw{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--line-soft);font-size:12.5px;font-weight:600;cursor:pointer;}
+.tg{appearance:none;-webkit-appearance:none;width:34px;height:20px;border-radius:20px;background:var(--line);position:relative;transition:.2s;flex:none;cursor:pointer;}
+.tg::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:var(--shadow-sm);transition:.2s;}
+.tg:checked{background:var(--purple);}
+.tg:checked::after{left:16px;}
+.ex-side textarea,.cc-card textarea,.cc-card input[type=text],.cc-card select,.ex-side select{width:100%;border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-size:12.5px;background:var(--lilac-mist);color:var(--ink);}
+.ex-side textarea{min-height:90px;resize:vertical;margin-top:6px;}
+.ex-lbl{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);margin:14px 0 4px;display:block;}
+.ex-paper{background:#fff;border:1px solid var(--line-soft);border-radius:var(--radius);box-shadow:var(--shadow-md);overflow:hidden;}
+.ex-cover{background:linear-gradient(135deg,var(--purple-deep),var(--purple) 60%,var(--purple-mid));color:#fff;padding:26px 30px;}
+.ex-cover .e1{font-size:10.5px;letter-spacing:.16em;font-weight:700;opacity:.8;text-transform:uppercase;}
+.ex-cover h2{margin:6px 0 4px;font-size:24px;font-weight:800;}
+.ex-cover .e3{font-size:12px;opacity:.85;}
+.ex-body{padding:24px 30px 8px;}
+.ex-sec{margin-bottom:28px;}
+.ex-sec>h5{margin:0 0 12px;font-size:14px;font-weight:800;color:var(--purple-deep);display:flex;align-items:center;gap:10px;}
+.ex-sec>h5::after{content:'';flex:1;height:1px;background:var(--line);}
+.ex-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+@media(max-width:800px){.ex-kpis{grid-template-columns:1fr 1fr;}}
+.ex-k{background:var(--lilac-mist);border:1px solid var(--line-soft);border-left:4px solid var(--purple);border-radius:12px;padding:12px 14px;}
+.ex-k .l{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);}
+.ex-k .n{font-family:var(--font-mono);font-size:24px;font-weight:700;margin:3px 0;}
+.ex-k .f{font-size:11px;color:var(--ink-soft);}
+.ex-g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:800px){.ex-g2{grid-template-columns:1fr;}}
+.ex-ch{border:1px solid var(--line-soft);border-radius:12px;padding:14px;}
+.ex-ch h6{margin:0 0 2px;font-size:12.5px;font-weight:800;}
+.ex-ch .s{font-size:11px;color:var(--ink-soft);margin-bottom:8px;}
+.ex-ins{margin:0;padding-left:18px;font-size:13px;line-height:1.8;color:var(--ink);}
+.ex-note{white-space:pre-wrap;font-size:13px;line-height:1.7;background:var(--lilac-mist);border-radius:10px;padding:12px 14px;}
+.cc-card{border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px;background:#fff;}
+.cc-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;}
+.cc-row{display:grid;grid-template-columns:1fr 150px;gap:10px;margin-bottom:8px;}
+.cc-card textarea{min-height:110px;font-family:var(--font-mono);font-size:12px;}
+.cc-empty{border:2px dashed var(--lilac);border-radius:12px;padding:22px;text-align:center;font-size:12.5px;color:var(--ink-soft);}
 </style>
 </head>
 <body>
@@ -529,7 +581,8 @@ input.field-input:focus{border-color:var(--purple-light);}
     <div class="tabs">
       <button class="tab-btn active" data-tab="tab-dados">Ações</button>
       <button class="tab-btn" data-tab="tab-evidencias">Evidências</button>
-      <button class="tab-btn" data-tab="tab-relatorio">Relatório</button>
+      <button class="tab-btn" data-tab="tab-relatorio">Relatório de evidências</button>
+      <button class="tab-btn" data-tab="tab-indicadores">📊 Relatório executivo</button>
     </div>
 
     <!-- Tab: Dados -->
@@ -585,21 +638,70 @@ input.field-input:focus{border-color:var(--purple-light);}
     <!-- Tab: Evidências -->
     <div class="tab-panel" id="tab-evidencias">
       <div class="section-head" style="margin-top:14px;"><h3>Galeria de evidências</h3><span class="hint" id="galleryCount"></span></div>
+      <div class="filters-bar gallery-filters">
+        <input type="text" id="gTaxon" list="gTaxonOptions" placeholder="Filtrar por taxonomia (ex: SSO.RDQ.58870)..." autocomplete="off">
+        <datalist id="gTaxonOptions"></datalist>
+        <span class="gf-label">Fotos incluídas de</span>
+        <input type="date" id="gDateFrom" title="Data inicial da inclusão das fotos">
+        <span class="gf-label">até</span>
+        <input type="date" id="gDateTo" title="Data final da inclusão das fotos">
+        <button class="btn btn-ghost btn-sm" id="gClear" type="button">Limpar filtros</button>
+      </div>
       <div class="gallery-grid" id="galleryGrid"></div>
     </div>
 
     <!-- Tab: Relatório -->
     <div class="tab-panel" id="tab-relatorio">
-      <div class="section-head" style="margin-top:14px;"><h3>Gerar relatório</h3><span class="hint">Exporte tudo que já foi tratado, com as evidências anexadas — pronto para impressão/PDF</span></div>
+      <div class="section-head" style="margin-top:14px;"><h3>Relatório de evidências</h3><span class="hint">PDF só com o número da RDQA, o local e as fotos de evidência</span></div>
       <div class="report-toolbar">
         <div class="report-scope">
-          <button class="active" data-scope="evidence">Ações tratadas (com evidência)</button>
-          <button data-scope="overdue">Vencidas</button>
-          <button data-scope="filtered">Filtro atual (aba Ações)</button>
+          <button class="active" data-scope="evidence">Todas com evidência</button>
+          <button data-scope="gallery">Filtro da galeria (taxonomia / data)</button>
         </div>
-        <button class="btn btn-primary" id="generateReportBtn">⬇ Gerar relatório (PDF)</button>
+        <button class="btn btn-primary" id="generateReportBtn">⬇ Gerar PDF de evidências</button>
       </div>
       <div class="report-preview-list" id="reportPreview"></div>
+    </div>
+
+    <!-- Tab: Relatório executivo -->
+    <div class="tab-panel" id="tab-indicadores">
+      <div class="section-head" style="margin-top:14px;"><h3>Relatório executivo</h3><span class="hint">Escolha o que entra, adicione gráficos próprios e exporte em PDF</span></div>
+      <div class="ex-wrap">
+        <aside class="ex-side">
+          <h4>Conteúdo do relatório</h4>
+          <div class="ex-hint">Ligue ou desligue as seções que vão para o PDF.</div>
+          <label class="ex-sw">Resumo e indicadores<input type="checkbox" class="tg secTg" data-sec="kpis" checked></label>
+          <label class="ex-sw">Concluídas por semana<input type="checkbox" class="tg secTg" data-sec="semanal" checked></label>
+          <label class="ex-sw">Status e risco<input type="checkbox" class="tg secTg" data-sec="status" checked></label>
+          <label class="ex-sw">Tendência e locais<input type="checkbox" class="tg secTg" data-sec="tend" checked></label>
+          <label class="ex-sw">Aging das vencidas<input type="checkbox" class="tg secTg" data-sec="aging" checked></label>
+          <label class="ex-sw">Colaboradores<input type="checkbox" class="tg secTg" data-sec="colab" checked></label>
+          <label class="ex-sw">Gráficos personalizados<input type="checkbox" class="tg secTg" data-sec="custom" checked></label>
+          <span class="ex-lbl">Período do gráfico semanal</span>
+          <select id="exWeeks"><option value="8">Últimas 8 semanas</option><option value="12" selected>Últimas 12 semanas</option><option value="26">Últimas 26 semanas</option><option value="0">Todo o período</option></select>
+          <span class="ex-lbl">Parecer / observações</span>
+          <textarea id="exNotes" placeholder="Texto livre que aparece no PDF (opcional)"></textarea>
+          <button class="btn btn-primary" id="exPdfBtn" type="button" style="width:100%;justify-content:center;margin-top:16px;">⬇ Exportar relatório em PDF</button>
+        </aside>
+        <div>
+          <div class="ex-paper">
+            <div class="ex-cover"><div class="e1">Painel RDQA · GMU</div><h2>Relatório Executivo</h2><div class="e3" id="exStamp"></div></div>
+            <div class="ex-body">
+              <div class="ex-sec" data-sec="kpis"><h5>Resumo executivo</h5><div class="ex-kpis" id="exKpis"></div><ul class="ex-ins" id="exInsights" style="margin-top:14px;"></ul></div>
+              <div class="ex-sec" data-sec="semanal"><h5>Concluídas por semana</h5><div class="ex-ch"><h6>RDQAs com evidência concluída por semana</h6><div class="s">Semana (segunda-feira) da primeira foto incluída em cada RDQA, com acumulado</div><div class="chart-canvas-wrap" style="height:280px;"><canvas id="exWeekly"></canvas></div></div></div>
+              <div class="ex-sec" data-sec="status"><h5>Status e nível de risco</h5><div class="ex-g2"><div class="ex-ch"><h6>Status das ações</h6><div class="s">Situação atual da base</div><div class="chart-canvas-wrap" style="height:240px;"><canvas id="exStatus"></canvas></div></div><div class="ex-ch"><h6>Em aberto por risco</h6><div class="s">Ações não concluídas</div><div class="chart-canvas-wrap" style="height:240px;"><canvas id="exRisk"></canvas></div></div></div></div>
+              <div class="ex-sec" data-sec="tend"><h5>Tendência e locais</h5><div class="ex-g2"><div class="ex-ch"><h6>Registros por mês</h6><div class="s">Últimos 12 meses</div><div class="chart-canvas-wrap" style="height:240px;"><canvas id="exTrend"></canvas></div></div><div class="ex-ch"><h6>Top 8 locais macro</h6><div class="s">Vermelho = vencidas</div><div class="chart-canvas-wrap" style="height:240px;"><canvas id="exLocais"></canvas></div></div></div></div>
+              <div class="ex-sec" data-sec="aging"><h5>Aging das ações vencidas</h5><div class="ex-kpis" id="exAging"></div></div>
+              <div class="ex-sec" data-sec="colab"><h5>Colaboradores com evidências</h5><div class="ex-ch"><h6>RDQAs com evidência por colaborador</h6><div class="s">Top 8</div><div class="chart-canvas-wrap" style="height:260px;"><canvas id="exColab"></canvas></div></div></div>
+              <div class="ex-sec" data-sec="notes" id="exNotesSec" style="display:none;"><h5>Parecer</h5><div class="ex-note" id="exNotesView"></div></div>
+              <div class="ex-sec" data-sec="custom"><h5>Gráficos personalizados</h5>
+                <div id="ccList"></div>
+                <button class="btn btn-soft" id="ccAdd" type="button">＋ Adicionar gráfico</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="footer-note">GMU · Gerência de Manutenção Civil e Utilidades Industriais — Painel RDQA. Dados processados localmente no navegador.</div>
@@ -1613,9 +1715,58 @@ async function loadAllEvidenceIndex(){
 
 async function renderGallery(){
   await loadAllEvidenceIndex();
+  paintGallery();
+}
+
+/* Lê os filtros da galeria: taxonomia (texto livre, sem acento) e período de inclusão das fotos */
+function getGalleryFilters(){
+  const taxon = stripAccents((document.getElementById('gTaxon').value||'').trim());
+  const fromV = document.getElementById('gDateFrom').value;
+  const toV = document.getElementById('gDateTo').value;
+  const from = fromV ? new Date(fromV+'T00:00:00').getTime() : null;
+  const to = toV ? new Date(toV+'T23:59:59.999').getTime() : null;
+  return {taxon, from, to, fromV, toV};
+}
+/* Retorna [[key, evidência-filtrada]] — as fotos já vêm filtradas pelo período */
+function getGalleryEntries(){
+  const f = getGalleryFilters();
+  const out = [];
+  Object.entries(evidenceCache).forEach(([key,v])=>{
+    if(!v.photos || !v.photos.length) return;
+    const rec = findByKey(key);
+    const title = rec? rec.title : key;
+    if(f.taxon && !stripAccents(title).includes(f.taxon)) return;
+    let photos = v.photos;
+    if(f.from!=null || f.to!=null){
+      photos = photos.filter(p=>{
+        if(!p.ts) return false;
+        if(f.from!=null && p.ts < f.from) return false;
+        if(f.to!=null && p.ts > f.to) return false;
+        return true;
+      });
+    }
+    if(!photos.length) return;
+    out.push([key, Object.assign({}, v, {photos})]);
+  });
+  return out;
+}
+function fmtTs(ts){ return ts? new Date(ts).toLocaleDateString('pt-BR') : null; }
+function photoDateRange(photos){
+  const ts = photos.map(p=>p.ts).filter(Boolean);
+  if(!ts.length) return 'data não registrada';
+  const a = fmtTs(Math.min(...ts)), b = fmtTs(Math.max(...ts));
+  return a===b ? 'incluída em '+a : 'incluídas de '+a+' a '+b;
+}
+
+function paintGallery(){
   const grid = document.getElementById('galleryGrid');
-  const entries = Object.entries(evidenceCache).filter(([k,v])=>v.photos && v.photos.length);
-  if(entries.length===0){
+  const totalWithEvi = Object.values(evidenceCache).filter(v=>v.photos && v.photos.length).length;
+  // sugestões de taxonomia (só as que têm evidência)
+  document.getElementById('gTaxonOptions').innerHTML = Object.keys(evidenceCache)
+    .filter(k=>evidenceCache[k].photos && evidenceCache[k].photos.length)
+    .map(k=>{ const r=findByKey(k); return `<option value="${escapeHtml(r? r.title : k)}">`; }).join('');
+
+  if(totalWithEvi===0){
     grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">
       <div class="ico">📷</div>
       <div>Nenhuma evidência anexada ainda. Abra uma ação na tabela e adicione fotos.</div>
@@ -1623,7 +1774,21 @@ async function renderGallery(){
     document.getElementById('galleryCount').textContent = '0 ações com evidências';
     return;
   }
-  document.getElementById('galleryCount').textContent = `${entries.length} ação(ões) com evidências · ${entries.reduce((s,[,v])=>s+v.photos.length,0)} fotos · ${new Set(entries.flatMap(([,v])=>v.colaboradores||[])).size} colaborador(es) envolvidos`;
+  const entries = getGalleryEntries();
+  const f = getGalleryFilters();
+  const filtered = !!(f.taxon || f.from!=null || f.to!=null);
+  const nPhotos = entries.reduce((s,[,v])=>s+v.photos.length,0);
+  const nContrib = new Set(entries.flatMap(([,v])=>v.colaboradores||[])).size;
+  document.getElementById('galleryCount').textContent =
+    `${entries.length}${filtered? ' de '+totalWithEvi : ''} ação(ões) com evidências · ${nPhotos} fotos · ${nContrib} colaborador(es) envolvidos`;
+
+  if(entries.length===0){
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">
+      <div class="ico">🔎</div>
+      <div>Nenhuma evidência encontrada para esse filtro. Ajuste a taxonomia ou o período.</div>
+    </div>`;
+    return;
+  }
   grid.innerHTML = entries.map(([key,v])=>{
     const rec = findByKey(key);
     const thumbs = v.photos.slice(0,2).map(p=>`<img src="${p.dataUrl}">`).join('');
@@ -1633,6 +1798,7 @@ async function renderGallery(){
       <div class="gallery-info">
         <div class="g-title">${escapeHtml(rec? rec.title : key)}</div>
         <div class="g-meta">${v.photos.length} foto(s) · ${rec? escapeHtml(truncate(rec.localMacro,24)) : ''}</div>
+        <div class="g-date">📅 ${photoDateRange(v.photos)}</div>
         <div class="g-contrib">👤 ${escapeHtml(contribs)}</div>
       </div>
     </div>`;
@@ -1643,75 +1809,468 @@ async function renderGallery(){
   }));
 }
 
+function clearGalleryFilters(){
+  ['gTaxon','gDateFrom','gDateTo'].forEach(id=>document.getElementById(id).value='');
+  paintGallery();
+}
+
+/* ================= PDF de indicadores ================= */
+function computeIndicators(){
+  const total = DATA.length;
+  const done = DATA.filter(d=>d._isDone).length;
+  const open = total - done;
+  const overdue = DATA.filter(d=>d._overdue).length;
+  const soon = DATA.filter(d=>!d._isDone && !d._overdue && d._daysDiff!=null && d._daysDiff<=7).length;
+  const criticalOpen = DATA.filter(d=>!d._isDone && d.nivelRisco==='Crítico').length;
+  const noDeadline = DATA.filter(d=>d._noDeadline).length;
+  const buckets = ['0-30','31-60','61-90','90+'].map(b=>({label:b+' dias', n:DATA.filter(d=>d._bucket===b).length}));
+  return {total, done, open, overdue, soon, criticalOpen, noDeadline, buckets, pct: total? done/total*100 : 100};
+}
+
+async function generateIndicatorsPDF(){
+  if(!window.jspdf || !window.jspdf.jsPDF){
+    toast('Não foi possível carregar a biblioteca de PDF. Verifique a conexão e tente novamente.');
+    return;
+  }
+  const btn = document.getElementById('gPdfBtn');
+  btn.disabled = true;
+  try{
+    const {jsPDF} = window.jspdf;
+    const doc = new jsPDF({unit:'mm', format:'a4'});
+    const W = 210, H = 297, M = 14, CW = W - 2*M;
+    const PURPLE = [91,44,131], DEEP = [59,25,89], INK = [40,24,57], SOFT = [110,94,128], PALE = [243,236,249], LINE = [231,218,241];
+    const ind = computeIndicators();
+    const now = new Date().toLocaleString('pt-BR');
+    let y = 0;
+
+    const newPage = ()=>{ doc.addPage(); y = M; };
+    const ensure = (h)=>{ if(y + h > H - 16) newPage(); };
+    const sectionTitle = (t)=>{
+      ensure(14);
+      doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(...DEEP);
+      doc.text(t, M, y);
+      doc.setDrawColor(...PURPLE); doc.setLineWidth(0.6); doc.line(M, y+1.8, M+14, y+1.8);
+      y += 8;
+    };
+
+    // ---- Cabeçalho
+    doc.setFillColor(...PURPLE); doc.rect(0, 0, W, 34, 'F');
+    try{
+      const logo = document.getElementById('logoImg').src;
+      if(logo && logo.startsWith('data:image')){
+        const fmt = /image\/png/.test(logo) ? 'PNG' : 'JPEG';
+        doc.setFillColor(255,255,255); doc.roundedRect(M, 7, 36, 20, 2, 2, 'F');
+        doc.addImage(logo, fmt, M+2, 9, 32, 16, undefined, 'FAST');
+      }
+    }catch(e){}
+    doc.setTextColor(255,255,255);
+    doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
+    doc.text('PAINEL RDQA · GMU', M+42, 13);
+    doc.setFontSize(17); doc.text('Relatório de Indicadores', M+42, 21);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
+    doc.text('Gerado em ' + now, M+42, 27.5);
+    y = 44;
+
+    // ---- KPIs (grade 3 x 2)
+    sectionTitle('Resumo geral');
+    const kpis = [
+      ['Aderência (concluídas)', ind.pct.toFixed(2).replace('.',',')+'%', `${ind.done.toLocaleString('pt-BR')} de ${ind.total.toLocaleString('pt-BR')} ações`, PURPLE],
+      ['Total de ações', ind.total.toLocaleString('pt-BR'), `${ind.open.toLocaleString('pt-BR')} em aberto`, PURPLE],
+      ['Vencidas', ind.overdue.toLocaleString('pt-BR'), 'com base na Data Limite', [192,57,43]],
+      ['Vencem em 7 dias', ind.soon.toLocaleString('pt-BR'), 'Limite nos próximos 7 dias', [199,162,51]],
+      ['Risco crítico em aberto', ind.criticalOpen.toLocaleString('pt-BR'), 'ações de nível crítico', [192,57,43]],
+      ['Em aberto sem Limite', ind.noDeadline.toLocaleString('pt-BR'), 'sem Data Limite definida', SOFT],
+    ];
+    const gap = 4, kw = (CW - 2*gap)/3, kh = 24;
+    kpis.forEach((k,i)=>{
+      const col = i%3, row = Math.floor(i/3);
+      const x = M + col*(kw+gap), yy = y + row*(kh+gap);
+      doc.setFillColor(...PALE); doc.roundedRect(x, yy, kw, kh, 2.5, 2.5, 'F');
+      doc.setFillColor(...k[3]); doc.roundedRect(x, yy, 1.8, kh, 0.9, 0.9, 'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(...SOFT);
+      doc.text(k[0].toUpperCase(), x+5, yy+6);
+      doc.setFontSize(18); doc.setTextColor(...k[3]);
+      doc.text(String(k[1]), x+5, yy+15);
+      doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(...SOFT);
+      doc.text(k[2], x+5, yy+20.5);
+    });
+    y += 2*kh + gap + 8;
+
+    // ---- Aging
+    sectionTitle('Aging das ações vencidas');
+    const bw = (CW - 3*gap)/4, bh = 18;
+    const bcolors = [[199,162,51],[217,123,61],[192,57,43],[142,36,24]];
+    ind.buckets.forEach((b,i)=>{
+      const x = M + i*(bw+gap);
+      doc.setFillColor(...PALE); doc.roundedRect(x, y, bw, bh, 2.5, 2.5, 'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.setTextColor(...bcolors[i]);
+      doc.text(String(b.n), x+4, y+9.5);
+      doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(...SOFT);
+      doc.text(b.label + ' vencida'+(b.n!==1?'s':''), x+4, y+14.5);
+    });
+    y += bh + 9;
+
+    // ---- Gráficos (reaproveita os canvases do painel)
+    const addChart = (canvasId, title, x, yy, w)=>{
+      const cv = document.getElementById(canvasId);
+      if(!cv || !cv.width || !cv.height) return 0;
+      const img = cv.toDataURL('image/png');
+      const h = Math.min(w * cv.height / cv.width, 70);
+      const iw = h * cv.width / cv.height;
+      doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...DEEP);
+      doc.text(title, x, yy);
+      doc.setDrawColor(...LINE); doc.setLineWidth(0.3); doc.roundedRect(x-1.5, yy+2, w+3, h+5, 2, 2, 'S');
+      doc.addImage(img, 'PNG', x + (w-iw)/2, yy+4.5, iw, h, undefined, 'FAST');
+      return h + 12;
+    };
+    sectionTitle('Indicadores');
+    const half = (CW - 6)/2;
+    let h1 = Math.max(addChart('chartAging','Status', M+1.5, y, half-3), 0);
+    let h2 = addChart('chartRisk','Nível de risco', M+half+6+1.5, y, half-3);
+    y += Math.max(h1,h2) + 4;
+    ensure(80);
+    h1 = addChart('chartTrend','Registros por mês', M+1.5, y, half-3);
+    h2 = addChart('chartVencidasAno','Total de ações registradas por ano', M+half+6+1.5, y, half-3);
+    y += Math.max(h1,h2) + 4;
+    ensure(95);
+    h1 = addChart('chartLocais','Top 10 locais macro', M+1.5, y, CW-3);
+    y += h1 + 4;
+
+    // ---- Rodapé / paginação
+    const n = doc.getNumberOfPages();
+    for(let p=1;p<=n;p++){
+      doc.setPage(p);
+      doc.setDrawColor(...LINE); doc.setLineWidth(0.3); doc.line(M, H-12, W-M, H-12);
+      doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(...SOFT);
+      doc.text('GMU · Gerência de Manutenção Civil e Utilidades Industriais — Painel RDQA', M, H-7.5);
+      doc.text('Página '+p+' de '+n, W-M, H-7.5, {align:'right'});
+    }
+
+    const stamp = new Date().toISOString().slice(0,10);
+    doc.save('Indicadores_RDQA_'+stamp+'.pdf');
+    toast('PDF gerado — pronto para envio.');
+  }catch(e){
+    console.error(e);
+    toast('Não foi possível gerar o PDF. Tente novamente.');
+  }finally{
+    btn.disabled = false;
+  }
+}
+
 /* ================= Report ================= */
-let reportScope = 'evidence'; // 'evidence' | 'filtered' | 'overdue'
-function setReportScope(s){
-  reportScope = s;
-  document.querySelectorAll('.report-scope button').forEach(b=>b.classList.toggle('active', b.dataset.scope===s));
+let reportScope = 'evidence'; // 'evidence' (todas) | 'gallery' (filtro da galeria)
+function setReportScope(sc){
+  reportScope = sc;
+  document.querySelectorAll('.report-scope button').forEach(b=>b.classList.toggle('active', b.dataset.scope===sc));
   renderReportPreview();
+}
+/* Itens do relatório de evidências: [{key, title, local, photos}] ordenados pelo número da RDQA */
+function getReportEntries(){
+  let pairs;
+  if(reportScope==='gallery') pairs = getGalleryEntries();
+  else pairs = Object.entries(evidenceCache).filter(([,v])=>v.photos && v.photos.length);
+  return pairs.map(([key,v])=>{
+    const rec = findByKey(key);
+    const macro = rec? (rec.localMacro||'') : '';
+    const det = rec? (rec.localDetalhado||'') : '';
+    return {key, title: rec? rec.title : key, local: [macro,det].filter(Boolean).join(' / ') || '—', photos: v.photos};
+  }).sort((a,b)=>String(a.title).localeCompare(String(b.title),'pt-BR',{numeric:true}));
 }
 async function renderReportPreview(){
   await loadAllEvidenceIndex();
-  let items;
-  if(reportScope==='evidence') items = DATA.filter(d=>evidenceCache[d._key] && evidenceCache[d._key].photos && evidenceCache[d._key].photos.length);
-  else if(reportScope==='overdue') items = DATA.filter(d=>d._overdue);
-  else items = sortData(getFiltered());
-
+  const items = getReportEntries();
   const wrap = document.getElementById('reportPreview');
   if(items.length===0){
-    wrap.innerHTML = `<div class="empty-state"><div class="ico">📄</div>Nenhum item nesse escopo.</div>`;
+    wrap.innerHTML = `<div class="empty-state"><div class="ico">📷</div>Nenhuma RDQA com evidência nesse escopo.</div>`;
     return;
   }
-  wrap.innerHTML = items.slice(0,200).map(d=>{
-    const evi = evidenceCache[d._key];
-    const imgs = evi&&evi.photos? evi.photos.map(p=>`<img src="${p.dataUrl}">`).join(''):'';
-    const contribs = evi&&evi.colaboradores&&evi.colaboradores.length? evi.colaboradores.join(', ') : null;
-    return `<div class="report-item">
-      <div class="ri-head"><span>${escapeHtml(d.title)}</span><span>${daysChip(d)}</span></div>
-      <div class="ri-meta">${escapeHtml(d.agingList)} · ${escapeHtml(d.nivelRisco)} · ${escapeHtml(d.localMacro||'—')} · registrado em ${fmtDate(d.dataRegistro)} · prazo ${fmtDate(d.limite)}${contribs? ' · tratado por: '+escapeHtml(contribs):''}</div>
-      ${imgs? `<div class="ri-imgs">${imgs}</div>` : '<div style="font-size:11px;color:var(--ink-faint);">Sem fotos anexadas</div>'}
-    </div>`;
-  }).join('') + (items.length>200? `<div class="hint" style="text-align:center;padding:10px;">Exibindo 200 de ${items.length} itens no preview (o relatório impresso trará todos).</div>`:'');
+  const nPhotos = items.reduce((s,i)=>s+i.photos.length,0);
+  wrap.innerHTML = `<div class="hint" style="padding:4px 2px 10px;">${items.length} RDQA(s) · ${nPhotos} foto(s) no relatório</div>` +
+    items.slice(0,100).map(i=>`<div class="report-item">
+      <div class="ri-head"><span>${escapeHtml(i.title)}</span></div>
+      <div class="ri-meta">${escapeHtml(i.local)}</div>
+      <div class="ri-imgs">${i.photos.map(p=>`<img src="${p.dataUrl}">`).join('')}</div>
+    </div>`).join('') +
+    (items.length>100? `<div class="hint" style="text-align:center;padding:10px;">Exibindo 100 de ${items.length} no preview (o PDF traz todas).</div>`:'');
 }
 
-function generateReport(){
-  const items = reportScope==='evidence'
-    ? DATA.filter(d=>evidenceCache[d._key] && evidenceCache[d._key].photos && evidenceCache[d._key].photos.length)
-    : reportScope==='overdue' ? DATA.filter(d=>d._overdue) : sortData(getFiltered());
-
-  const scopeLabel = {evidence:'Ações Tratadas — Evidências Fotográficas', overdue:'Ações Vencidas', filtered:'Ações — Filtro Atual'}[reportScope];
-  const now = new Date().toLocaleString('pt-BR');
-  let html = `
-    <div style="font-family:'Montserrat',sans-serif;padding:30px;">
-      <div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid #5B2C83;padding-bottom:16px;margin-bottom:20px;">
-        <img src="${document.getElementById('logoImg').src}" style="height:50px;">
-        <div>
-          <div style="font-size:10px;letter-spacing:.1em;color:#5B2C83;font-weight:700;text-transform:uppercase;">Relatório RDQA</div>
-          <div style="font-size:18px;font-weight:800;color:#281839;">${scopeLabel}</div>
-          <div style="font-size:11px;color:#6E5E80;">Gerado em ${now} · ${items.length} ação(ões)</div>
-        </div>
-      </div>`;
-  items.forEach(d=>{
-    const evi = evidenceCache[d._key];
-    const contribs = evi&&evi.colaboradores&&evi.colaboradores.length? evi.colaboradores.join(', ') : null;
-    html += `<div style="border:1px solid #E7DAF1;border-radius:10px;padding:14px 16px;margin-bottom:12px;page-break-inside:avoid;">
-      <div style="display:flex;justify-content:space-between;font-weight:700;color:#3B1959;font-size:13px;">
-        <span>${escapeHtml(d.title)}</span><span>${escapeHtml(d.agingList)}</span>
-      </div>
-      <div style="font-size:11px;color:#6E5E80;margin:4px 0 8px;">
-        Risco: ${escapeHtml(d.nivelRisco||'—')} · Local: ${escapeHtml(d.localMacro||'—')} / ${escapeHtml(d.localDetalhado||'—')}<br>
-        Registro: ${fmtDate(d.dataRegistro)} · Prazo: ${fmtDate(d.limite)} · ${d._isDone?'Concluída':(d._overdue? 'Vencida há '+Math.abs(d._daysDiff)+' dias':(d._daysDiff!=null?'Vence em '+d._daysDiff+' dias':'Sem prazo'))}
-        ${contribs? `<br>Tratado por: <b>${escapeHtml(contribs)}</b>` : ''}
-      </div>
-      <div style="font-size:11.5px;color:#281839;margin-bottom:6px;"><b>Descrição:</b> ${escapeHtml(d.descricaoEvento||'—')}</div>
-      <div style="font-size:11.5px;color:#281839;margin-bottom:8px;"><b>Ação corretiva:</b> ${escapeHtml(d.acoesPropostas||'—')}</div>
-      ${evi&&evi.notes? `<div style="font-size:11.5px;color:#281839;margin-bottom:8px;"><b>Observação de campo:</b> ${escapeHtml(evi.notes)}</div>`:''}
-      ${evi&&evi.photos&&evi.photos.length? `<div style="display:flex;flex-wrap:wrap;gap:6px;">${evi.photos.map(p=>`<div style="text-align:center;"><img src="${p.dataUrl}" style="width:110px;height:110px;object-fit:cover;border-radius:6px;border:1px solid #E7DAF1;display:block;">${p.colaborador?`<div style="font-size:8.5px;color:#6E5E80;margin-top:2px;">${escapeHtml(p.colaborador)}</div>`:''}</div>`).join('')}</div>` : ''}
-    </div>`;
+function loadImgSize(dataUrl){
+  return new Promise(res=>{
+    const im = new Image();
+    im.onload = ()=>res({w:im.naturalWidth||1, h:im.naturalHeight||1});
+    im.onerror = ()=>res({w:1,h:1});
+    im.src = dataUrl;
   });
-  html += `<div style="text-align:center;font-size:10px;color:#A395B3;margin-top:20px;">GMU · Gerência de Manutenção Civil e Utilidades Industriais — Painel RDQA</div></div>`;
-  document.getElementById('printArea').innerHTML = html;
-  window.print();
+}
+
+async function generateReport(){
+  if(!window.jspdf || !window.jspdf.jsPDF){
+    toast('Não foi possível carregar a biblioteca de PDF. Verifique a conexão e tente novamente.');
+    return;
+  }
+  const btn = document.getElementById('generateReportBtn');
+  btn.disabled = true;
+  const oldTxt = btn.textContent;
+  btn.textContent = 'Gerando PDF...';
+  try{
+    await loadAllEvidenceIndex();
+    const items = getReportEntries();
+    if(!items.length){ toast('Nenhuma RDQA com evidência nesse escopo.'); return; }
+
+    const {jsPDF} = window.jspdf;
+    const doc = new jsPDF({unit:'mm', format:'a4'});
+    const W=210, H=297, M=14, CW=W-2*M;
+    const PURPLE=[91,44,131], DEEP=[59,25,89], INK=[40,24,57], SOFT=[110,94,128], LINE=[231,218,241], PALE=[243,236,249];
+    const nPhotos = items.reduce((s,i)=>s+i.photos.length,0);
+    const now = new Date().toLocaleString('pt-BR');
+    let y = 0;
+
+    // Cabeçalho
+    doc.setFillColor(...PURPLE); doc.rect(0,0,W,34,'F');
+    try{
+      const logo = document.getElementById('logoImg').src;
+      if(logo && logo.startsWith('data:image')){
+        doc.setFillColor(255,255,255); doc.roundedRect(M,7,36,20,2,2,'F');
+        doc.addImage(logo, /image\/png/.test(logo)?'PNG':'JPEG', M+2, 9, 32, 16, undefined, 'FAST');
+      }
+    }catch(e){}
+    doc.setTextColor(255,255,255);
+    doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.text('PAINEL RDQA · GMU', M+42, 13);
+    doc.setFontSize(17); doc.text('Relatório de Evidências', M+42, 21);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
+    doc.text(`Gerado em ${now} · ${items.length} RDQA(s) · ${nPhotos} foto(s)`, M+42, 27.5);
+    y = 44;
+
+    const gap = 4, cols = 3, cw = (CW - (cols-1)*gap)/cols, ch = 52;
+    const rdqaHeader = (it, cont)=>{
+      doc.setFillColor(...PALE); doc.roundedRect(M, y, CW, 12, 2, 2, 'F');
+      doc.setFillColor(...PURPLE); doc.roundedRect(M, y, 1.8, 12, 0.9, 0.9, 'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(...DEEP);
+      doc.text(String(it.title) + (cont? '  (continuação)' : ''), M+5, y+5.2);
+      doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(...SOFT);
+      doc.text(doc.splitTextToSize('Local: ' + it.local, CW-10)[0], M+5, y+9.6);
+      y += 16;
+    };
+
+    for(const it of items){
+      if(y + 16 + ch + 6 > H-16){ doc.addPage(); y = M; }
+      rdqaHeader(it, false);
+      let col = 0;
+      for(const p of it.photos){
+        if(col===0 && y + ch + 6 > H-16){ doc.addPage(); y = M; rdqaHeader(it, true); }
+        const x = M + col*(cw+gap);
+        doc.setDrawColor(...LINE); doc.setLineWidth(0.3); doc.roundedRect(x, y, cw, ch, 1.5, 1.5, 'S');
+        try{
+          const sz = await loadImgSize(p.dataUrl);
+          const boxW = cw-3, boxH = ch-9;
+          let iw = boxW, ih = iw*sz.h/sz.w;
+          if(ih > boxH){ ih = boxH; iw = ih*sz.w/sz.h; }
+          doc.addImage(p.dataUrl, 'JPEG', x+1.5+(boxW-iw)/2, y+1.5+(boxH-ih)/2, iw, ih, undefined, 'FAST');
+        }catch(e){
+          doc.setFontSize(8); doc.setTextColor(...SOFT); doc.text('Imagem indisponível', x+4, y+ch/2);
+        }
+        doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(...SOFT);
+        const cap = (p.ts? 'Incluída em '+fmtTs(p.ts) : '') ;
+        if(cap) doc.text(cap, x+cw/2, y+ch-2.5, {align:'center'});
+        col++;
+        if(col===cols){ col=0; y += ch + gap; }
+      }
+      if(col!==0) y += ch + gap;
+      y += 4;
+    }
+
+    // Rodapé
+    const n = doc.getNumberOfPages();
+    for(let pg=1; pg<=n; pg++){
+      doc.setPage(pg);
+      doc.setDrawColor(...LINE); doc.setLineWidth(0.3); doc.line(M, H-12, W-M, H-12);
+      doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(...SOFT);
+      doc.text('GMU · Gerência de Manutenção Civil e Utilidades Industriais — Painel RDQA', M, H-7.5);
+      doc.text('Página '+pg+' de '+n, W-M, H-7.5, {align:'right'});
+    }
+    doc.save('Evidencias_RDQA_'+new Date().toISOString().slice(0,10)+'.pdf');
+    toast('PDF de evidências gerado — pronto para envio.');
+  }catch(e){
+    console.error(e);
+    toast('Não foi possível gerar o PDF. Tente novamente.');
+  }finally{
+    btn.disabled = false;
+    btn.textContent = oldTxt;
+  }
+}
+
+
+/* ================= Relatório executivo ================= */
+const PAL=['#5B2C83','#9E76C0','#C9A9DC','#4C9A6E','#D97B3D','#C7A233','#C0392B','#3B1959'];
+let CC=[], execLoaded=false, ccTimer;
+const SEC_LIST=['kpis','semanal','status','tend','aging','colab','custom'];
+function weekStart(ts){const d=new Date(ts);d.setHours(0,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7));return d;}
+function weeklyData(limit){
+  const first={},ph={};
+  Object.values(evidenceCache).forEach(v=>{
+    if(!v.photos||!v.photos.length) return;
+    const ts=v.photos.map(p=>p.ts).filter(Boolean); if(!ts.length) return;
+    const w=weekStart(Math.min(...ts)).getTime(); first[w]=(first[w]||0)+1;
+    v.photos.forEach(p=>{ if(p.ts){const k=weekStart(p.ts).getTime(); ph[k]=(ph[k]||0)+1;} });
+  });
+  const keys=Object.keys(first).concat(Object.keys(ph)).map(Number).sort((a,b)=>a-b);
+  if(!keys.length) return {labels:[],conc:[],acum:[],fotos:[]};
+  const weeks=[]; let d=new Date(keys[0]); const last=keys[keys.length-1];
+  while(d.getTime()<=last){weeks.push(d.getTime()); d=new Date(d); d.setDate(d.getDate()+7);}
+  let ac=0; const rows=weeks.map(w=>{ac+=first[w]||0; return {w,c:first[w]||0,a:ac,f:ph[w]||0};});
+  const cut=limit>0? rows.slice(-limit):rows;
+  return {labels:cut.map(r=>new Date(r.w).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})),conc:cut.map(r=>r.c),acum:cut.map(r=>r.a),fotos:cut.map(r=>r.f)};
+}
+function exChart(id,cfg){ destroyChart(id); const cv=document.getElementById(id); if(!cv) return; cfg.options=Object.assign({responsive:true,maintainAspectRatio:false,animation:false},cfg.options||{}); charts[id]=new Chart(cv,cfg); }
+const DL=(on,extra)=>Object.assign({display:on,anchor:'end',align:'top',font:{weight:700,size:10},color:'#281839'},extra||{});
+const exN=n=>n.toLocaleString('pt-BR');
+
+async function renderExec(){
+  if(!evidenceIndexLoaded) await loadAllEvidenceIndex();
+  if(!execLoaded){ execLoaded=true; try{ const r=await Store.get('exec:config',true); if(r&&r.value){const c=JSON.parse(r.value); CC=c.charts||[]; document.getElementById('exNotes').value=c.notes||'';} }catch(e){} }
+  const ind=computeIndicators();
+  document.getElementById('exStamp').textContent='Posição em '+new Date().toLocaleString('pt-BR')+' · '+exN(ind.total)+' ações na base';
+  const wd=weeklyData(+document.getElementById('exWeeks').value);
+  const withEvi=Object.values(evidenceCache).filter(v=>v.photos&&v.photos.length);
+  const nPhotos=withEvi.reduce((a,v)=>a+v.photos.length,0);
+  const colab={}; withEvi.forEach(v=>(v.colaboradores||[]).forEach(c=>colab[c]=(colab[c]||0)+1));
+  const K=(l,n,f,c)=>`<div class="ex-k" style="border-left-color:${c}"><div class="l">${l}</div><div class="n" style="color:${c}">${n}</div><div class="f">${f}</div></div>`;
+  document.getElementById('exKpis').innerHTML=
+    K('Aderência',ind.pct.toFixed(2).replace('.',',')+'%',exN(ind.done)+' de '+exN(ind.total)+' concluídas','#5B2C83')+
+    K('Em aberto',exN(ind.open),'ações não concluídas','#7A4AA3')+
+    K('Vencidas',exN(ind.overdue),'pela Data Limite','#C0392B')+
+    K('Vencem em 7 dias',exN(ind.soon),'atenção imediata','#C7A233')+
+    K('Risco crítico aberto',exN(ind.criticalOpen),'prioridade máxima','#C0392B')+
+    K('Sem Limite',exN(ind.noDeadline),'em aberto sem prazo','#6E5E80')+
+    K('RDQAs com evidência',exN(withEvi.length),exN(nPhotos)+' fotos anexadas','#4C9A6E')+
+    K('Colaboradores',exN(Object.keys(colab).length),'envolvidos nas evidências','#4C9A6E');
+  const best=wd.conc.length? wd.conc.indexOf(Math.max(...wd.conc)):-1;
+  const ins=[`Aderência de <b>${ind.pct.toFixed(2).replace('.',',')}%</b>: ${exN(ind.done)} de ${exN(ind.total)} ações concluídas.`,
+    `<b>${exN(ind.overdue)}</b> ações vencidas e <b>${exN(ind.soon)}</b> vencendo nos próximos 7 dias; <b>${exN(ind.criticalOpen)}</b> de risco crítico em aberto.`];
+  if(best>=0&&wd.conc[best]>0) ins.push(`Semana de maior conclusão com evidência: <b>${wd.labels[best]}</b> (${wd.conc[best]} RDQA${wd.conc[best]>1?'s':''}). Total no período exibido: <b>${wd.conc.reduce((a,b)=>a+b,0)}</b>.`);
+  else ins.push('Ainda não há RDQAs com fotos de evidência para o gráfico semanal.');
+  document.getElementById('exInsights').innerHTML=ins.map(t=>`<li>${t}</li>`).join('');
+  window._exIns=ins.map(t=>t.replace(/<[^>]+>/g,''));
+  // semanal
+  exChart('exWeekly',{type:'bar',data:{labels:wd.labels,datasets:[
+    {label:'Concluídas na semana',data:wd.conc,backgroundColor:'#5B2C83',borderRadius:6,order:2,datalabels:DL(true)},
+    {label:'Fotos incluídas',data:wd.fotos,backgroundColor:'#C9A9DC',borderRadius:6,order:3,datalabels:DL(false)},
+    {type:'line',label:'Acumulado',data:wd.acum,borderColor:'#4C9A6E',backgroundColor:'#4C9A6E',tension:.3,pointRadius:3,order:1,datalabels:DL(false)}]},
+    options:{plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:true,ticks:{precision:0}}}}});
+  // status
+  const st={}; DATA.forEach(d=>st[d.agingList||'—']=(st[d.agingList||'—']||0)+1);
+  exChart('exStatus',{type:'doughnut',data:{labels:Object.keys(st),datasets:[{data:Object.values(st),backgroundColor:Object.keys(st).map(k=>STATUS_COLOR[k]||'#999')}]},options:{cutout:'62%',plugins:{legend:{position:'right'},datalabels:{display:true,color:'#fff',font:{weight:700,size:10}}}}});
+  const rk=RISK_ORDER.map(r=>DATA.filter(d=>!d._isDone&&d.nivelRisco===r).length);
+  exChart('exRisk',{type:'bar',data:{labels:RISK_ORDER,datasets:[{data:rk,backgroundColor:RISK_ORDER.map(r=>RISK_COLOR[r]),borderRadius:6,datalabels:DL(true)}]},options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0}}}}});
+  // tendência
+  const mo={}; DATA.forEach(d=>{ if(d.dataRegistro) mo[d.dataRegistro.slice(0,7)]=(mo[d.dataRegistro.slice(0,7)]||0)+1; });
+  const mk=Object.keys(mo).sort().slice(-12);
+  exChart('exTrend',{type:'line',data:{labels:mk.map(k=>k.slice(5)+'/'+k.slice(2,4)),datasets:[{data:mk.map(k=>mo[k]),borderColor:'#5B2C83',backgroundColor:'rgba(122,74,163,.15)',fill:true,tension:.3,pointRadius:3,datalabels:DL(true)}]},options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0}}}}});
+  // locais
+  const lc={}; DATA.forEach(d=>{ if(!d.localMacro) return; lc[d.localMacro]=lc[d.localMacro]||{t:0,o:0}; lc[d.localMacro].t++; if(d._overdue) lc[d.localMacro].o++; });
+  const top=Object.entries(lc).sort((a,b)=>b[1].t-a[1].t).slice(0,8);
+  exChart('exLocais',{type:'bar',data:{labels:top.map(t=>truncate(t[0],22)),datasets:[{label:'Vencidas',data:top.map(t=>t[1].o),backgroundColor:'#C0392B',datalabels:DL(false)},{label:'Demais',data:top.map(t=>t[1].t-t[1].o),backgroundColor:'#9E76C0',datalabels:DL(false)}]},options:{indexAxis:'y',plugins:{legend:{position:'bottom'}},scales:{x:{stacked:true,ticks:{precision:0}},y:{stacked:true}}}});
+  // aging
+  const bc=['#C7A233','#D97B3D','#C0392B','#8E2418'];
+  document.getElementById('exAging').innerHTML=ind.buckets.map((b,i)=>K(b.label,exN(b.n),'vencida'+(b.n!==1?'s':''),bc[i])).join('');
+  // colaboradores
+  const ct=Object.entries(colab).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  exChart('exColab',{type:'bar',data:{labels:ct.map(c=>truncate(c[0],24)),datasets:[{data:ct.map(c=>c[1]),backgroundColor:'#7A4AA3',borderRadius:6,datalabels:DL(true,{align:'right'})}]},options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{precision:0}}}}});
+  applySections(); renderNotesView(); renderCC();
+}
+function secOn(k){ const el=document.querySelector('.secTg[data-sec="'+k+'"]'); return !el||el.checked; }
+function applySections(){ SEC_LIST.forEach(k=>{ const el=document.querySelector('.ex-sec[data-sec="'+k+'"]'); if(el) el.style.display=secOn(k)?'':'none'; }); }
+function renderNotesView(){ const t=(document.getElementById('exNotes').value||'').trim(); document.getElementById('exNotesSec').style.display=t?'':'none'; document.getElementById('exNotesView').textContent=t; }
+
+/* ---- Gráficos personalizados ---- */
+function parseCC(txt){ return String(txt||'').split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{ const m=l.match(/^(.*?)[;\t|]\s*(-?[\d.,]+)\s*$/); return m? [m[1].trim(), parseFloat(m[2].replace(/\./g,'').replace(',','.')) ]:null; }).filter(r=>r&&!isNaN(r[1])); }
+function drawCC(c){
+  const rows=parseCC(c.data), t=c.type;
+  const isPie=t==='doughnut';
+  exChart('cc-'+c.id,{type:t==='barh'?'bar':t,data:{labels:rows.map(r=>r[0]),datasets:[{label:c.title||'Série',data:rows.map(r=>r[1]),
+    backgroundColor:isPie||t==='bar'||t==='barh'?rows.map((_,i)=>isPie?PAL[i%PAL.length]:'#5B2C83'):'rgba(122,74,163,.15)',borderColor:'#5B2C83',fill:t==='line',tension:.3,borderRadius:t==='line'?0:6,
+    datalabels:isPie?{display:true,color:'#fff',font:{weight:700,size:10}}:DL(true)}]},
+    options:{indexAxis:t==='barh'?'y':'x',plugins:{legend:{display:isPie,position:'right'}},scales:isPie?{}:{y:{beginAtZero:true},x:{}}}});
+}
+function renderCC(){
+  const box=document.getElementById('ccList');
+  if(!CC.length){ box.innerHTML='<div class="cc-empty">Nenhum gráfico personalizado. Clique em “Adicionar gráfico”, informe os dados e ligue a opção “Incluir no PDF”.</div>'; return; }
+  box.innerHTML=CC.map(c=>`<div class="cc-card" data-id="${c.id}">
+    <div class="cc-top"><label class="ex-sw" style="border:0;padding:0;gap:10px;"><input type="checkbox" class="tg cc-inc" ${c.inc?'checked':''}> Incluir no PDF</label><button class="btn btn-danger btn-sm cc-del" type="button">Remover</button></div>
+    <div class="cc-row"><input type="text" class="cc-title" placeholder="Título do gráfico" value="${escapeHtml(c.title)}"><select class="cc-type"><option value="bar">Barras</option><option value="barh">Barras horizontais</option><option value="line">Linha</option><option value="doughnut">Rosca</option></select></div>
+    <textarea class="cc-data" placeholder="Um item por linha: Rótulo; Valor&#10;Ex.: Jan; 12">${escapeHtml(c.data)}</textarea>
+    <input type="text" class="cc-note" style="margin:8px 0;" placeholder="Comentário curto (aparece abaixo do gráfico no PDF)" value="${escapeHtml(c.note||'')}">
+    <div class="chart-canvas-wrap" style="height:240px;"><canvas id="cc-${c.id}"></canvas></div></div>`).join('');
+  box.querySelectorAll('.cc-card').forEach(card=>{
+    const c=CC.find(x=>x.id===card.dataset.id); card.querySelector('.cc-type').value=c.type;
+    const upd=()=>{ c.title=card.querySelector('.cc-title').value; c.type=card.querySelector('.cc-type').value; c.data=card.querySelector('.cc-data').value; c.note=card.querySelector('.cc-note').value; c.inc=card.querySelector('.cc-inc').checked; drawCC(c); saveExec(); };
+    card.querySelectorAll('input,select,textarea').forEach(el=>el.addEventListener('input',upd));
+    card.querySelector('.cc-del').addEventListener('click',()=>{ if(confirm('Remover este gráfico?')){ destroyChart('cc-'+c.id); CC=CC.filter(x=>x!==c); saveExec(); renderCC(); } });
+    drawCC(c);
+  });
+}
+function saveExec(){ clearTimeout(ccTimer); ccTimer=setTimeout(async()=>{ try{ await Store.set('exec:config',JSON.stringify({charts:CC,notes:document.getElementById('exNotes').value}),true); }catch(e){ console.error(e); } },700); }
+function wireExec(){
+  document.getElementById('exPdfBtn').addEventListener('click',generateExecutivePDF);
+  document.querySelectorAll('.secTg').forEach(el=>el.addEventListener('change',applySections));
+  document.getElementById('exWeeks').addEventListener('change',renderExec);
+  document.getElementById('exNotes').addEventListener('input',()=>{ renderNotesView(); saveExec(); });
+  document.getElementById('ccAdd').addEventListener('click',()=>{ CC.push({id:'c'+Date.now(),title:'Novo gráfico',type:'bar',data:'Item A; 10\nItem B; 20\nItem C; 15',note:'',inc:true}); saveExec(); renderCC(); });
+}
+
+async function generateExecutivePDF(){
+  if(!window.jspdf||!window.jspdf.jsPDF){ toast('Biblioteca de PDF indisponível. Verifique a conexão.'); return; }
+  const btn=document.getElementById('exPdfBtn'); const old=btn.textContent; btn.disabled=true; btn.textContent='Gerando PDF…';
+  try{
+    if(!charts.exWeekly) await renderExec();
+    const {jsPDF}=window.jspdf; const doc=new jsPDF({unit:'mm',format:'a4'});
+    const W=210,H=297,M=14,CW=W-2*M; const PU=[91,44,131],DE=[59,25,89],SO=[110,94,128],PA=[243,236,249],LI=[231,218,241];
+    const ind=computeIndicators(); let y=0;
+    const ensure=h=>{ if(y+h>H-16){ doc.addPage(); y=M; } };
+    const title=t=>{ ensure(16); doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(...DE); doc.text(t,M,y); doc.setDrawColor(...PU); doc.setLineWidth(.6); doc.line(M,y+1.8,M+14,y+1.8); y+=8; };
+    doc.setFillColor(...PU); doc.rect(0,0,W,34,'F');
+    try{ const logo=document.getElementById('logoImg').src; if(logo&&logo.startsWith('data:image')){ doc.setFillColor(255,255,255); doc.roundedRect(M,7,36,20,2,2,'F'); doc.addImage(logo,/image\/png/.test(logo)?'PNG':'JPEG',M+2,9,32,16,undefined,'FAST'); } }catch(e){}
+    doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.text('PAINEL RDQA · GMU',M+42,13); doc.setFontSize(17); doc.text('Relatório Executivo',M+42,21);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.text('Gerado em '+new Date().toLocaleString('pt-BR'),M+42,27.5); y=44;
+    const chart=(id,t,x,yy,w,maxH)=>{ const cv=document.getElementById(id); if(!cv||!cv.width) return 0; const h=Math.min(w*cv.height/cv.width,maxH||70), iw=h*cv.width/cv.height;
+      doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...DE); doc.text(t,x,yy);
+      doc.setDrawColor(...LI); doc.setLineWidth(.3); doc.roundedRect(x-1.5,yy+2,w+3,h+5,2,2,'S');
+      doc.addImage(cv.toDataURL('image/png'),'PNG',x+(w-iw)/2,yy+4.5,iw,h,undefined,'FAST'); return h+12; };
+    const half=(CW-6)/2, gap=4;
+    const card=(x,yy,w,h,l,n,f,c)=>{ doc.setFillColor(...PA); doc.roundedRect(x,yy,w,h,2.5,2.5,'F'); doc.setFillColor(...c); doc.roundedRect(x,yy,1.8,h,.9,.9,'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(...SO); doc.text(l.toUpperCase(),x+5,yy+6); doc.setFontSize(16); doc.setTextColor(...c); doc.text(String(n),x+5,yy+14);
+      if(f){ doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(...SO); doc.text(f,x+5,yy+19); } };
+    if(secOn('kpis')){
+      title('Resumo executivo');
+      const ks=[...document.querySelectorAll('#exKpis .ex-k')].map(e=>[e.querySelector('.l').textContent,e.querySelector('.n').textContent,e.querySelector('.f').textContent,(e.style.borderLeftColor.match(/\d+/g)||[91,44,131]).map(Number)]);
+      const kw=(CW-3*gap)/4,kh=23; ks.forEach((k,i)=>card(M+(i%4)*(kw+gap),y+Math.floor(i/4)*(kh+gap),kw,kh,k[0],k[1],truncate(k[2],30),k[3]));
+      y+=Math.ceil(ks.length/4)*(kh+gap)+4;
+      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(40,24,57);
+      (window._exIns||[]).forEach(t=>{ const ln=doc.splitTextToSize('•  '+t,CW); ensure(ln.length*4.6+2); doc.text(ln,M,y); y+=ln.length*4.6+1.5; }); y+=5;
+    }
+    if(secOn('semanal')){ title('Concluídas por semana'); ensure(85); y+=chart('exWeekly','RDQAs com evidência concluída por semana (acumulado em linha)',M+1.5,y,CW-3,75)+4; }
+    if(secOn('status')){ ensure(80); title('Status e nível de risco'); ensure(70); const a=chart('exStatus','Status das ações',M+1.5,y,half-3,60), b=chart('exRisk','Em aberto por risco',M+half+7.5,y,half-3,60); y+=Math.max(a,b)+4; }
+    if(secOn('tend')){ ensure(80); title('Tendência e locais'); ensure(70); const a=chart('exTrend','Registros por mês',M+1.5,y,half-3,60), b=chart('exLocais','Top 8 locais macro',M+half+7.5,y,half-3,60); y+=Math.max(a,b)+4; }
+    if(secOn('aging')){ ensure(40); title('Aging das ações vencidas'); const bc=[[199,162,51],[217,123,61],[192,57,43],[142,36,24]], bw=(CW-3*gap)/4; ind.buckets.forEach((b,i)=>card(M+i*(bw+gap),y,bw,21,b.label,b.n,'vencida'+(b.n!==1?'s':''),bc[i])); y+=21+8; }
+    if(secOn('colab')){ ensure(85); title('Colaboradores com evidências'); y+=chart('exColab','RDQAs com evidência por colaborador',M+1.5,y,CW-3,65)+4; }
+    const notes=(document.getElementById('exNotes').value||'').trim();
+    if(notes){ ensure(30); title('Parecer'); doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(40,24,57);
+      doc.splitTextToSize(notes,CW).forEach(l=>{ ensure(5); doc.text(l,M,y); y+=4.8; }); y+=6; }
+    if(secOn('custom')){ const inc=CC.filter(c=>c.inc&&parseCC(c.data).length);
+      if(inc.length){ ensure(20); title('Gráficos personalizados'); for(const c of inc){ ensure(88); y+=chart('cc-'+c.id,c.title||'Gráfico',M+1.5,y,CW-3,70);
+        if(c.note){ doc.setFont('helvetica','italic'); doc.setFontSize(8.5); doc.setTextColor(...SO); const ln=doc.splitTextToSize(c.note,CW); ensure(ln.length*4); doc.text(ln,M,y-2); y+=ln.length*4; } y+=4; } } }
+    const n=doc.getNumberOfPages();
+    for(let p=1;p<=n;p++){ doc.setPage(p); doc.setDrawColor(...LI); doc.setLineWidth(.3); doc.line(M,H-12,W-M,H-12); doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(...SO);
+      doc.text('GMU · Gerência de Manutenção Civil e Utilidades Industriais — Painel RDQA',M,H-7.5); doc.text('Página '+p+' de '+n,W-M,H-7.5,{align:'right'}); }
+    const fname='Relatorio_Executivo_RDQA_'+new Date().toISOString().slice(0,10)+'.pdf';
+    const url=URL.createObjectURL(doc.output('blob'));
+    const a=document.createElement('a'); a.href=url; a.download=fname; document.body.appendChild(a); a.click(); a.remove();
+    let lk=document.getElementById('exPdfLink');
+    if(!lk){ lk=document.createElement('div'); lk.id='exPdfLink'; lk.style.cssText='margin-top:12px;font-size:12px;line-height:1.5;'; btn.insertAdjacentElement('afterend',lk); }
+    lk.innerHTML='✅ PDF gerado. Se o download não iniciou, <a href="'+url+'" target="_blank" download="'+fname+'" style="color:var(--purple);font-weight:700;">clique aqui para abrir o PDF</a>.';
+    toast('Relatório executivo gerado.');
+  }catch(e){ console.error(e); toast('Não foi possível gerar o PDF: '+((e&&e.message)||e)); }
+  finally{ btn.disabled=false; btn.textContent=old; }
 }
 
 /* ================= Tabs ================= */
@@ -1720,6 +2279,7 @@ function switchTab(id){
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===id));
   if(id==='tab-evidencias') renderGallery();
   if(id==='tab-relatorio') renderReportPreview();
+  if(id==='tab-indicadores') renderExec();
 }
 
 /* ================= Toast ================= */
@@ -1766,6 +2326,12 @@ function wireStaticUI(){
   document.querySelectorAll('.tab-btn').forEach(b=>b.addEventListener('click', ()=>switchTab(b.dataset.tab)));
   document.querySelectorAll('.report-scope button').forEach(b=>b.addEventListener('click', ()=>setReportScope(b.dataset.scope)));
   document.getElementById('generateReportBtn').addEventListener('click', generateReport);
+  ['gTaxon','gDateFrom','gDateTo'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', paintGallery);
+    document.getElementById(id).addEventListener('change', paintGallery);
+  });
+  document.getElementById('gClear').addEventListener('click', clearGalleryFilters);
+  wireExec();
 
   document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeDetail(); closeLightbox(); } });
 }
